@@ -1,0 +1,5 @@
+{
+  "name": "VogueCast",
+  "description": "Smart weather prediction and outfit suggestions based on your location, identity, and style.",
+  "requestFramePermissions": []
+}

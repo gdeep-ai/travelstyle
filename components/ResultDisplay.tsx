@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PredictionResult, StyleOption, SingleOutfit } from '../types';
 import { generateOutfitImage } from '../services/geminiService';
-import { CloudSun, Sparkles, ExternalLink, RefreshCw, ChevronDown, ChevronUp, Sun, Moon, Wine, Search } from 'lucide-react';
+import { ExternalLink, RefreshCw, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Instagram } from 'lucide-react';
 
 interface ResultDisplayProps {
   data: PredictionResult;
@@ -14,18 +14,40 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, onRe
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loadingImage, setLoadingImage] = useState(false);
   const [showContext, setShowContext] = useState(false);
+  const [activePaletteColor, setActivePaletteColor] = useState<string | null>(null);
+
+  // Tab Order for Carousel
+  const tabs: ('day' | 'evening' | 'dinner')[] = ['day', 'evening', 'dinner'];
+  const activeIndex = tabs.indexOf(activeTab);
 
   // Get current active outfit data
   const activeOutfit: SingleOutfit = data.outfits[activeTab];
 
-  // Auto-generate image when active tab changes
+  const handleNext = () => {
+    const nextIndex = (activeIndex + 1) % tabs.length;
+    setActiveTab(tabs[nextIndex]);
+    setActivePaletteColor(null); // Reset color focus on tab change
+  };
+
+  const handlePrev = () => {
+    const prevIndex = (activeIndex - 1 + tabs.length) % tabs.length;
+    setActiveTab(tabs[prevIndex]);
+    setActivePaletteColor(null); // Reset color focus on tab change
+  };
+
+  const handleColorClick = (color: string) => {
+    setActivePaletteColor(color);
+  };
+
+  // Auto-generate image when active tab or active color changes
   useEffect(() => {
     let isMounted = true;
 
     const fetchImage = async () => {
       setLoadingImage(true);
       const outfitSummary = `${activeOutfit.headline}. ${activeOutfit.items.join(', ')}`;
-      const url = await generateOutfitImage(outfitSummary, selectedStyle);
+      // Pass the active color focus if selected
+      const url = await generateOutfitImage(outfitSummary, selectedStyle, activePaletteColor || undefined);
       
       if (isMounted) {
         setImageUrl(url);
@@ -36,205 +58,190 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, onRe
     fetchImage();
 
     return () => { isMounted = false; };
-  }, [activeTab, activeOutfit, selectedStyle]);
+  }, [activeTab, activeOutfit, selectedStyle, activePaletteColor]);
 
-  // Helper to get Google Image Search URL
-  const getSearchUrl = (query: string) => {
-    const searchTerm = encodeURIComponent(`${query} ${selectedStyle} fashion`);
-    return `https://www.google.com/search?q=${searchTerm}&tbm=isch`;
+  // Helper to get Instagram Hashtag URL
+  const getInstagramUrl = (item: string) => {
+    // Remove spaces and special chars to make a hashtag
+    const tag = item.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+    return `https://www.instagram.com/explore/tags/${tag}/`;
   };
 
   return (
-    <div className="w-full max-w-7xl animate-fade-in-up">
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        
-        {/* Left Column: Details (7 cols) */}
-        <div className="lg:col-span-7 space-y-8">
-          
-          {/* Weather Card */}
-          <div className="bg-slate-800/60 backdrop-blur-md border border-slate-700 rounded-[2rem] p-8 shadow-xl relative overflow-hidden">
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <h2 className="text-slate-400 text-lg font-semibold uppercase tracking-wider">Forecast</h2>
-                <h3 className="text-4xl font-bold text-white mt-2 leading-tight">{data.weather.location}</h3>
-              </div>
-              <CloudSun className="text-blue-400" size={48} />
+    <div className="w-full max-w-7xl animate-fade-in-up pb-20">
+      
+      {/* Top Section: Forecast */}
+      <div className="border-b border-neutral-800 pb-12 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            <div>
+                <span className="text-neutral-500 uppercase tracking-[0.3em] text-xs font-bold mb-2 block">Location</span>
+                <h2 className="text-6xl md:text-8xl font-serif text-white mb-4 leading-none">{data.weather.location}</h2>
+                <div className="text-3xl font-light text-neutral-300">{data.weather.temperature}</div>
+                <div className="text-xl text-neutral-500 italic mt-1 font-serif">{data.weather.condition}</div>
             </div>
-            
-            <div className="flex items-center gap-6 mb-6">
-              <div className="text-6xl font-light text-white">{data.weather.temperature}</div>
-              <div className="px-4 py-2 bg-slate-700/50 rounded-full text-blue-200 text-base font-medium">
-                {data.weather.condition}
-              </div>
-            </div>
-            
-            <p className="text-slate-300 text-xl leading-relaxed">
-              {data.weather.description}
-            </p>
-
-            {/* Collapsible Seasonal Analysis Section */}
-            {data.weather.seasonalContext && (
-              <div className="mt-8 border-t border-slate-700/50 pt-4">
-                <button 
-                  onClick={() => setShowContext(!showContext)}
-                  className="w-full flex items-center justify-between text-emerald-400 hover:text-emerald-300 transition-colors group"
-                >
-                  <span className="text-lg font-semibold uppercase tracking-wider flex items-center gap-2">
-                     Historical Context
-                  </span>
-                  {showContext ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-                </button>
+            <div className="pt-2 md:pt-8 md:pl-12 md:border-l border-neutral-800">
+                <p className="text-lg leading-relaxed text-neutral-300 font-serif">
+                   {data.weather.description}
+                </p>
                 
-                {showContext && (
-                  <div className="mt-4 bg-slate-900/40 p-6 rounded-xl animate-fade-in">
-                    <p className="text-slate-300 text-lg leading-relaxed whitespace-pre-line">
-                      {data.weather.seasonalContext}
-                    </p>
+                {/* Collapsible Seasonal Analysis */}
+                {data.weather.seasonalContext && (
+                  <div className="mt-6 pt-6 border-t border-neutral-800">
+                    <button 
+                      onClick={() => setShowContext(!showContext)}
+                      className="flex items-center gap-2 text-xs uppercase tracking-widest text-neutral-500 hover:text-white transition-colors"
+                    >
+                      {showContext ? 'Hide Analysis' : 'Read Historical Analysis'}
+                      {showContext ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                    </button>
+                    
+                    {showContext && (
+                      <div className="mt-4 text-neutral-400 text-sm leading-relaxed whitespace-pre-line border-l-2 border-neutral-800 pl-4">
+                        {data.weather.seasonalContext}
+                      </div>
+                    )}
+                  </div>
+                )}
+            </div>
+        </div>
+      </div>
+
+
+      {/* Main Content: Split Layout */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-0 lg:gap-16">
+        
+        {/* Left: Outfit Details (Editorial Style) */}
+        <div className="lg:col-span-7 space-y-8 relative">
+          
+          {/* Carousel Navigation */}
+          <div className="flex items-center justify-between border-b border-neutral-800 pb-4 mb-8">
+            <span className="text-neutral-500 text-xs uppercase tracking-[0.2em] font-bold">The Edit</span>
+            <div className="flex items-center gap-6">
+                <button onClick={handlePrev} className="text-white hover:text-neutral-400 transition-colors">
+                    <ChevronLeft size={24} />
+                </button>
+                <span className="text-sm font-serif italic text-neutral-400 w-24 text-center">
+                    {activeTab === 'day' ? 'I. Day' : activeTab === 'evening' ? 'II. Evening' : 'III. Dinner'}
+                </span>
+                <button onClick={handleNext} className="text-white hover:text-neutral-400 transition-colors">
+                    <ChevronRight size={24} />
+                </button>
+            </div>
+          </div>
+
+          <div className="animate-fade-in">
+             <h2 className="text-4xl md:text-5xl font-serif text-white mb-6 leading-tight">
+               {activeOutfit.headline}
+             </h2>
+
+             <p className="text-neutral-400 mb-10 text-lg leading-relaxed max-w-xl">
+               {activeOutfit.description}
+             </p>
+
+             <div className="space-y-6">
+                <h3 className="text-white text-xs font-bold uppercase tracking-[0.2em] mb-6">Key Components</h3>
+                <ul className="space-y-4">
+                  {activeOutfit.items.map((item, idx) => (
+                    <li key={idx} className="group">
+                      <a 
+                        href={getInstagramUrl(item)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="flex items-center justify-between border-b border-neutral-800 py-3 hover:border-white transition-colors cursor-pointer"
+                      >
+                        <span className="text-xl md:text-2xl font-serif text-neutral-300 group-hover:text-white transition-colors capitalize">{item}</span>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                            <span className="text-[10px] uppercase tracking-wider text-neutral-500">View on IG</span>
+                            <Instagram size={18} className="text-neutral-400" />
+                        </div>
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+             </div>
+
+             {activeOutfit.colorPalette && (
+               <div className="mt-12 flex items-center gap-4">
+                  <span className="text-xs text-neutral-500 uppercase tracking-widest">Palette</span>
+                  <div className="h-[1px] bg-neutral-800 flex-1"></div>
+                  <div className="flex gap-2">
+                    {activeOutfit.colorPalette.map((color, idx) => (
+                      <div key={idx} className="flex flex-col items-center gap-1 group relative">
+                        <button 
+                          onClick={() => handleColorClick(color)}
+                          className={`w-8 h-8 rounded-full border border-neutral-700 transition-all transform hover:scale-110 ${activePaletteColor === color ? 'ring-2 ring-white scale-110' : ''}`}
+                          style={{ backgroundColor: color }}
+                          title={`Generate image focusing on ${color}`}
+                        ></button>
+                        {/* Tooltip */}
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-neutral-800 text-neutral-300 text-[10px] px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none uppercase tracking-wide">
+                            Focus {color}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+               </div>
+             )}
+          </div>
+        </div>
+
+        {/* Right: Visuals */}
+        <div className="lg:col-span-5 mt-12 lg:mt-0">
+           <div className="sticky top-12">
+              <div className="aspect-[3/4] bg-neutral-900 border border-neutral-800 relative overflow-hidden flex items-center justify-center mb-6">
+                {loadingImage ? (
+                  <div className="flex flex-col items-center gap-4 text-neutral-500">
+                    <div className="w-12 h-12 border-2 border-neutral-800 border-t-white rounded-full animate-spin"></div>
+                    <p className="text-xs uppercase tracking-widest animate-pulse">Rendering Concept...</p>
+                    {activePaletteColor && (
+                        <p className="text-[10px] uppercase tracking-widest text-neutral-600">Focusing on {activePaletteColor}</p>
+                    )}
+                  </div>
+                ) : imageUrl ? (
+                  <div className="relative w-full h-full group">
+                    <img 
+                      src={imageUrl} 
+                      alt="AI generated outfit suggestion" 
+                      className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-700"
+                    />
+                  </div>
+                ) : (
+                  <div className="text-neutral-600 flex flex-col items-center gap-3">
+                     <RefreshCw size={32} className="opacity-50" />
+                     <p className="text-sm uppercase tracking-widest">Image Unavailable</p>
                   </div>
                 )}
               </div>
-            )}
-          </div>
+              
+              <div className="flex gap-4">
+                 <button 
+                    onClick={onReset}
+                    className="flex-1 py-4 border border-white text-white hover:bg-white hover:text-black transition-colors uppercase text-xs font-bold tracking-[0.2em]"
+                >
+                    New Search
+                </button>
+              </div>
 
-          {/* Outfit Selection Tabs (Cards) */}
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { id: 'day', label: 'Daytime', icon: Sun },
-              { id: 'evening', label: 'Evening', icon: Moon },
-              { id: 'dinner', label: 'Dinner', icon: Wine }
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id as any)}
-                className={`p-4 rounded-2xl border transition-all flex flex-col items-center justify-center gap-2 ${
-                  activeTab === tab.id
-                    ? 'bg-indigo-600 border-indigo-500 text-white shadow-lg scale-[1.02]'
-                    : 'bg-slate-800/40 border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-200'
-                }`}
-              >
-                <tab.icon size={24} />
-                <span className="font-semibold text-lg">{tab.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Active Outfit Card */}
-          <div className="bg-slate-800/60 backdrop-blur-md border border-slate-700 rounded-[2rem] p-8 shadow-xl relative overflow-hidden min-h-[400px]">
-             
-             <div className="relative z-10">
-               <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-400 font-bold text-3xl">
-                    {activeOutfit.headline}
-                  </h2>
-                  <Sparkles className="text-purple-400" size={28} />
-               </div>
-
-               <p className="text-slate-200 mb-8 italic leading-relaxed text-xl border-l-4 border-purple-500/50 pl-4">
-                 "{activeOutfit.description}"
-               </p>
-
-               <div className="space-y-6">
-                  <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest">Key Pieces (Click to Find)</h3>
-                  <ul className="grid grid-cols-1 gap-4">
-                    {activeOutfit.items.map((item, idx) => (
-                      <li key={idx}>
+              {/* Grounding Sources */}
+              {data.groundingUrls.length > 0 && (
+                <div className="mt-8 pt-4 border-t border-neutral-800">
+                    <div className="flex flex-wrap gap-x-6 gap-y-2">
+                        {data.groundingUrls.map((url, i) => (
                         <a 
-                          href={getSearchUrl(item)}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex items-center justify-between group bg-slate-900/40 hover:bg-indigo-900/20 p-4 rounded-xl border border-slate-700/50 hover:border-indigo-500/50 transition-all cursor-pointer"
+                            key={i} 
+                            href={url} 
+                            target="_blank" 
+                            rel="noreferrer"
+                            className="flex items-center gap-1 text-[10px] text-neutral-600 uppercase tracking-wider hover:text-neutral-400"
                         >
-                          <div className="flex items-center gap-4">
-                            <div className="min-w-[8px] h-[8px] rounded-full bg-pink-500 group-hover:shadow-[0_0_10px_rgba(236,72,153,0.7)] transition-shadow"></div>
-                            <span className="text-slate-200 text-xl group-hover:text-indigo-200">{item}</span>
-                          </div>
-                          <Search size={20} className="text-slate-600 group-hover:text-indigo-400" />
+                            <ExternalLink size={10} />
+                            Source {i + 1}
                         </a>
-                      </li>
-                    ))}
-                  </ul>
-               </div>
-
-               {activeOutfit.colorPalette && (
-                 <div className="mt-8">
-                    <h3 className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-4">Palette</h3>
-                    <div className="flex gap-3">
-                      {activeOutfit.colorPalette.map((color, idx) => (
-                        <div key={idx} className="flex flex-col items-center gap-1 group cursor-help">
-                          <div 
-                            className="w-12 h-12 rounded-full border border-slate-600 shadow-md ring-2 ring-transparent hover:ring-white/50 transition-all"
-                            style={{ backgroundColor: color.includes('#') || ['black','white','red','blue','green'].some(c => color.toLowerCase().includes(c)) ? color : '#334155' }}
-                            title={color}
-                          ></div>
-                        </div>
-                      ))}
+                        ))}
                     </div>
-                 </div>
-               )}
-             </div>
-          </div>
-
-          {/* Grounding Sources */}
-          {data.groundingUrls.length > 0 && (
-            <div className="bg-slate-900/40 rounded-2xl p-5 border border-slate-800">
-              <h4 className="text-sm text-slate-500 uppercase font-bold mb-3">Weather Sources</h4>
-              <div className="flex flex-wrap gap-3">
-                {data.groundingUrls.map((url, i) => (
-                  <a 
-                    key={i} 
-                    href={url} 
-                    target="_blank" 
-                    rel="noreferrer"
-                    className="flex items-center gap-2 text-sm text-blue-400 hover:text-blue-300 hover:underline bg-blue-900/20 px-3 py-1.5 rounded-lg"
-                  >
-                    <ExternalLink size={12} />
-                    Source {i + 1}
-                  </a>
-                ))}
-              </div>
-            </div>
-          )}
-
-        </div>
-
-        {/* Right Column: Visuals (5 cols) */}
-        <div className="lg:col-span-5 flex flex-col gap-8 sticky top-8 h-fit">
-          <div className="flex-1 bg-slate-800/60 backdrop-blur-md border border-slate-700 rounded-[2rem] p-3 shadow-xl flex items-center justify-center min-h-[600px] relative">
-            {loadingImage ? (
-              <div className="flex flex-col items-center gap-6 text-slate-400">
-                <div className="relative">
-                  <div className="w-20 h-20 border-4 border-slate-600 border-t-purple-500 rounded-full animate-spin"></div>
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Sparkles size={28} className="text-purple-500 animate-pulse" />
-                  </div>
                 </div>
-                <p className="text-lg font-medium animate-pulse">Visualizing {activeTab} vibe...</p>
-              </div>
-            ) : imageUrl ? (
-              <div className="relative w-full h-full rounded-3xl overflow-hidden group">
-                <img 
-                  src={imageUrl} 
-                  alt="AI generated outfit suggestion" 
-                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-8 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <p className="text-white text-lg font-medium">AI Visualization of {activeOutfit.headline}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-slate-500 flex flex-col items-center gap-3">
-                 <RefreshCw size={48} className="opacity-50" />
-                 <p className="text-xl">Could not generate visual.</p>
-              </div>
-            )}
-          </div>
-          
-          <button 
-            onClick={onReset}
-            className="w-full py-5 bg-slate-700 hover:bg-slate-600 text-white rounded-2xl font-bold text-xl transition-all shadow-lg active:scale-95"
-          >
-            Start Over
-          </button>
+                )}
+           </div>
         </div>
 
       </div>

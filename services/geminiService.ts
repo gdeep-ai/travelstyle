@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { PredictionResult, StyleOption } from "../types";
+import { PredictionResult, StyleOption, GenderOption } from "../types";
 
 // Initialize the client
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -9,36 +9,47 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
  */
 export const getStyleAdvice = async (
   who: string,
+  gender: GenderOption,
   where: string,
-  date: string,
-  style: StyleOption
+  dateRange: string,
+  style: StyleOption,
+  userContext: string,
+  userImageBase64: string | null
 ): Promise<PredictionResult> => {
   const modelId = "gemini-2.5-flash"; 
   
-  const prompt = `
-    I need you to act as an expert meteorologist and personal stylist.
+  const promptText = `
+    I need you to act as an expert Editor-in-Chief of a high-end fashion publication (like Vogue, GQ, Harper's Bazaar) and a meteorologist.
     
     User Profile:
     - Identity: ${who}
+    - Gender Identity: ${gender}
     - Destination: ${where}
-    - Date of Trip: ${date}
-    - Preferred Style: ${style}
+    - Date Range: ${dateRange}
+    - Aesthetic: ${style}
+    - Wardrobe Constraints/Favorites: ${userContext || "None provided"}
     
+    ${userImageBase64 ? "NOTE: An image of a specific item or inspiration has been provided. Analyze this image and try to INCORPORATE this item or its style into at least one of the outfit scenarios." : ""}
+
     Part 1: Weather Research & Analysis
-    1. Retrieve historical weather data for the location "${where}" on/around the date "${date}" for the past 5 years. Look for patterns.
-    2. Find the specific forecast for "${where}" on "${date}".
-    3. COMPARE the historical patterns with the predicted conditions.
+    1. Retrieve historical weather data for "${where}" during the dates "${dateRange}" for the past 5 years.
+    2. Find the forecast for "${where}" during this period.
+    3. COMPARE historical patterns with predicted conditions.
     
     Part 2: Style Advice (Three Scenarios)
-    Based on the weather and style, suggest THREE distinct outfit options for the user's day:
+    Suggest THREE distinct outfit options for the user's trip. 
+    Tone: Editorial, sophisticated, authoritative but accessible. Use fashion terminology appropriate for ${gender}.
+    
+    Scenarios:
     1. Daytime (Functional/Activity based)
     2. Evening (Relaxed/Transition)
     3. Nice Dinner (Elevated/Going Out)
     
     Guidelines:
-    - Focus on mainstream, accessible fashion.
-    - Be clear and specific with item names (e.g., "Camel Trench Coat" instead of "Coat").
-    - The "seasonalContext" should be simple, easy to read, and use bullet points or breaks for readability.
+    - Focus on timeless, stylish pieces mixed with modern trends.
+    - Be clear and specific (e.g., "Cashmere turtleneck", "Selvedge denim", "Double-breasted blazer").
+    - The "seasonalContext" should be concise and formatted for quick reading (bullet points).
+    - Ensure suggestions align with the Gender Identity: ${gender}.
     
     Output Format:
     You MUST return the result as a raw JSON object (no markdown).
@@ -46,38 +57,50 @@ export const getStyleAdvice = async (
     {
       "weather": {
         "location": "City/Place Name",
-        "temperature": "e.g. 24°C / 75°F",
+        "temperature": "e.g. 24°C / 75°F (Average)",
         "condition": "e.g. Sunny, Rainy",
-        "description": "Short forecast summary.",
-        "seasonalContext": "A clear, easy-to-read summary of the historical analysis vs current forecast. Use bullet points (•) for key trends."
+        "description": "Short, punchy forecast summary.",
+        "seasonalContext": "Analysis of historical vs current. Use • bullets."
       },
       "outfits": {
         "day": {
-          "headline": "Daytime Look Name",
-          "description": "Why this works for the day.",
-          "items": ["Item 1", "Item 2", "Item 3"],
-          "colorPalette": ["Hex1", "Hex2"]
+          "headline": "Daytime Edit",
+          "description": "Editorial description of the look.",
+          "items": ["Item 1", "Item 2", "Item 3", "Item 4"],
+          "colorPalette": ["Hex1", "Hex2", "Hex3"]
         },
         "evening": {
-          "headline": "Evening Look Name",
-          "description": "Why this works for the evening.",
-          "items": ["Item 1", "Item 2", "Item 3"],
-          "colorPalette": ["Hex1", "Hex2"]
+          "headline": "Evening Transition",
+          "description": "Editorial description of the look.",
+          "items": ["Item 1", "Item 2", "Item 3", "Item 4"],
+          "colorPalette": ["Hex1", "Hex2", "Hex3"]
         },
         "dinner": {
-          "headline": "Dinner Look Name",
-          "description": "Why this works for a nice dinner.",
-          "items": ["Item 1", "Item 2", "Item 3"],
-          "colorPalette": ["Hex1", "Hex2"]
+          "headline": "The Dinner Cut",
+          "description": "Editorial description of the look.",
+          "items": ["Item 1", "Item 2", "Item 3", "Item 4"],
+          "colorPalette": ["Hex1", "Hex2", "Hex3"]
         }
       }
     }
   `;
 
+  const parts: any[] = [{ text: promptText }];
+
+  if (userImageBase64) {
+    const base64Data = userImageBase64.split(',')[1];
+    parts.push({
+      inlineData: {
+        mimeType: "image/jpeg", // Assuming jpeg/png for simplicity, or extract from string
+        data: base64Data
+      }
+    });
+  }
+
   try {
     const response = await ai.models.generateContent({
       model: modelId,
-      contents: prompt,
+      contents: { role: 'user', parts: parts },
       config: {
         tools: [{ googleSearch: {} }],
       },
@@ -86,12 +109,10 @@ export const getStyleAdvice = async (
     const text = response.text || "{}";
     const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     
-    // Extract URLs for grounding
     const groundingUrls = groundingChunks
       .map((chunk) => chunk.web?.uri)
       .filter((uri): uri is string => !!uri);
 
-    // Clean up the text response to ensure it's valid JSON
     let cleanJson = text.replace(/```json/g, "").replace(/```/g, "").trim();
     
     const firstBrace = cleanJson.indexOf('{');
@@ -106,7 +127,7 @@ export const getStyleAdvice = async (
     return {
       weather: parsedData.weather,
       outfits: parsedData.outfits,
-      groundingUrls: Array.from(new Set(groundingUrls)), // Remove duplicates
+      groundingUrls: Array.from(new Set(groundingUrls)), 
     };
 
   } catch (error) {
@@ -118,16 +139,20 @@ export const getStyleAdvice = async (
 /**
  * Generates an image of the outfit using a visual model.
  */
-export const generateOutfitImage = async (outfitDescription: string, style: string): Promise<string> => {
+export const generateOutfitImage = async (outfitDescription: string, style: string, focusColor?: string): Promise<string> => {
   const modelId = "gemini-2.5-flash-image";
 
-  const prompt = `
-    Fashion photography, flat lay of a complete outfit.
+  let prompt = `
+    High-fashion editorial photography, flat lay of a complete outfit on a neutral concrete or marble surface.
     Items: ${outfitDescription}.
     Style: ${style}. 
-    High quality, photorealistic, neutral background.
+    Minimalist, chic, expensive lighting.
     No people.
   `;
+
+  if (focusColor) {
+    prompt += ` Emphasis on the color ${focusColor}. The lighting and accessories should highlight ${focusColor} tones.`;
+  }
 
   try {
     const response = await ai.models.generateContent({

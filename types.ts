@@ -3,7 +3,7 @@ export interface WeatherData {
   temperature: string;
   condition: string;
   description: string;
-  seasonalContext: string; // New field for historical analysis
+  seasonalContext: string;
 }
 
 export interface SingleOutfit {
@@ -34,4 +34,18 @@ export enum StyleOption {
   ATHLEISURE = 'Athleisure / Sporty',
   TRENDY = 'Trendy / Night Out',
   MINIMALIST = 'Minimalist / Clean',
+}
+
+export enum GenderOption {
+  FEMALE = 'Female',
+  MALE = 'Male',
+  NON_BINARY = 'Non-Binary',
+  GENDERQUEER = 'Genderqueer',
+  AGENDER = 'Agender',
+  PREFER_NOT_TO_SAY = 'Prefer not to say'
+}
+
+export interface DateRange {
+  start: string;
+  end: string;
 }

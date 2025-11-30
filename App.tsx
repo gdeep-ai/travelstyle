@@ -1,15 +1,22 @@
 import React, { useState } from 'react';
-import { StyleOption, PredictionResult } from './types';
+import { StyleOption, PredictionResult, DateRange, GenderOption } from './types';
 import { getStyleAdvice } from './services/geminiService';
 import InputForm from './components/InputForm';
 import ResultDisplay from './components/ResultDisplay';
-import { Wind } from 'lucide-react';
 
 const App: React.FC = () => {
   const [who, setWho] = useState('');
+  const [gender, setGender] = useState<GenderOption>(GenderOption.FEMALE);
   const [where, setWhere] = useState('');
-  // Default to today's date formatted as YYYY-MM-DD
-  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
+  
+  // Extra Context
+  const [userContext, setUserContext] = useState('');
+  const [userImage, setUserImage] = useState<string | null>(null);
+
+  // Default date range
+  const today = new Date().toISOString().split('T')[0];
+  const [dateRange, setDateRange] = useState<DateRange>({ start: today, end: today });
+  
   const [style, setStyle] = useState<StyleOption>(StyleOption.CASUAL);
   
   const [result, setResult] = useState<PredictionResult | null>(null);
@@ -20,7 +27,8 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const data = await getStyleAdvice(who, where, date, style);
+      const dateString = `${dateRange.start} to ${dateRange.end}`;
+      const data = await getStyleAdvice(who, gender, where, dateString, style, userContext, userImage);
       setResult(data);
     } catch (err: any) {
       console.error(err);
@@ -34,43 +42,40 @@ const App: React.FC = () => {
     setResult(null);
     setWho('');
     setWhere('');
-    setDate(new Date().toISOString().split('T')[0]);
+    setUserContext('');
+    setUserImage(null);
+    const t = new Date().toISOString().split('T')[0];
+    setDateRange({ start: t, end: t });
     setError(null);
   };
 
   return (
-    <div className="min-h-screen w-full bg-[#0f172a] relative overflow-x-hidden selection:bg-purple-500/30">
+    <div className="min-h-screen w-full bg-[#0a0a0a] text-neutral-100 selection:bg-white selection:text-black">
       
-      {/* Background Gradients */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-indigo-900/20 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-purple-900/20 rounded-full blur-[120px]"></div>
-        <div className="absolute top-[40%] left-[50%] -translate-x-1/2 w-[30%] h-[30%] bg-blue-900/10 rounded-full blur-[100px]"></div>
+      {/* Editorial Header Line */}
+      <div className="border-b border-neutral-900 py-4 mb-12">
+        <div className="container mx-auto px-6 flex justify-between items-center">
+            <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-neutral-500">Vol. 01</span>
+            <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-neutral-500">Est. 2024</span>
+        </div>
       </div>
 
-      {/* Main Content */}
-      <div className="relative z-10 container mx-auto px-4 py-8 lg:py-16 flex flex-col items-center min-h-screen">
+      <div className="relative z-10 container mx-auto px-6 pb-20 flex flex-col items-center min-h-screen">
         
         {/* Header */}
-        <header className="text-center mb-16">
-          <div className="flex items-center justify-center gap-3 mb-6">
-             <div className="p-3 bg-gradient-to-tr from-indigo-500 to-purple-500 rounded-xl shadow-lg">
-                <Wind className="text-white" size={32} />
-             </div>
-             <h1 className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-slate-400">
+        <header className="text-center mb-20">
+             <h1 className="text-6xl md:text-9xl font-serif text-white tracking-tighter mb-6">
                VogueCast
              </h1>
-          </div>
-          <p className="text-slate-300 text-xl max-w-2xl mx-auto leading-relaxed font-light">
-            Smart weather predictions tailored to your actual closet. 
-            Tell us who you are, where you're headed, and when.
+          <p className="text-neutral-400 text-sm md:text-base uppercase tracking-[0.2em] max-w-xl mx-auto border-t border-b border-neutral-800 py-4">
+            Curated Forecasts • Bespoke Styling • Editorial Vision
           </p>
         </header>
 
         {/* Dynamic Content */}
         <main className="w-full flex flex-col items-center justify-center flex-1">
           {error && (
-            <div className="w-full max-w-xl bg-red-500/10 border border-red-500/50 text-red-200 px-6 py-4 rounded-2xl mb-8 text-center text-lg">
+            <div className="w-full max-w-xl border border-red-900/50 text-red-400 px-6 py-4 mb-8 text-center text-sm uppercase tracking-widest">
               {error}
             </div>
           )}
@@ -79,12 +84,18 @@ const App: React.FC = () => {
             <InputForm
               who={who}
               setWho={setWho}
+              gender={gender}
+              setGender={setGender}
               where={where}
               setWhere={setWhere}
-              date={date}
-              setDate={setDate}
+              dateRange={dateRange}
+              setDateRange={setDateRange}
               style={style}
               setStyle={setStyle}
+              userContext={userContext}
+              setUserContext={setUserContext}
+              userImage={userImage}
+              setUserImage={setUserImage}
               onSubmit={handleSubmit}
               isLoading={isLoading}
             />
@@ -97,8 +108,8 @@ const App: React.FC = () => {
           )}
         </main>
         
-        <footer className="mt-16 text-slate-500 text-base">
-          <p>© {new Date().getFullYear()} VogueCast • Powered by Gemini</p>
+        <footer className="mt-32 text-neutral-700 text-xs uppercase tracking-[0.2em]">
+          <p>© VogueCast Digital • Powered by Gemini</p>
         </footer>
       </div>
     </div>

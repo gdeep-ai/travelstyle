@@ -44,10 +44,10 @@ export const streamLoadingNarrative = async function*(
   attire: string,
   where: string,
   style: string,
-  vibe: string
+  vibe: string,
+  tone: number
 ) {
   const alignment = determineAlignment(who, style);
-  const tone = alignment.includes('Chaotic') || alignment.includes('Evil') ? 80 : alignment.includes('Lawful') || alignment.includes('Good') ? 20 : 50;
 
   const prompt = `
     You are a friendly RPG storyteller and high-end fashion visual designer.
@@ -93,12 +93,12 @@ export const getStyleAdvice = async (
   style: StyleOption,
   userContext: string,
   userImageBase64: string | null,
-  localBlend: boolean
+  localBlend: boolean,
+  tone: number
 ): Promise<PredictionResult> => {
   const modelId = "gemini-2.5-flash"; 
   
   const alignment = determineAlignment(who, style);
-  const tone = alignment.includes('Chaotic') || alignment.includes('Evil') ? 80 : alignment.includes('Lawful') || alignment.includes('Good') ? 20 : 50;
 
   const promptText = `
     You are a friendly RPG storyteller and high-end fashion visual designer. Your task is to convert a PLAYER character sheet into a themed, narrative travel wardrobe experience.

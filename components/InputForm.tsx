@@ -13,6 +13,8 @@ interface InputFormProps {
   setWhere: (val: string) => void;
   vibe: string;
   setVibe: (val: string) => void;
+  tone: number;
+  setTone: (val: number) => void;
   dateRange: DateRange;
   setDateRange: (val: DateRange) => void;
   style: StyleOption;
@@ -68,6 +70,8 @@ const InputForm: React.FC<InputFormProps> = ({
   setWhere,
   vibe,
   setVibe,
+  tone,
+  setTone,
   dateRange,
   setDateRange,
   style,
@@ -85,6 +89,14 @@ const InputForm: React.FC<InputFormProps> = ({
   const [showPersonas, setShowPersonas] = useState(false);
 
   const filteredPersonas = PERSONAS.filter(p => p.toLowerCase().includes(who.toLowerCase()));
+
+  const getToneLabel = (value: number) => {
+    if (value < 20) return "Classic & Sweet";
+    if (value < 40) return "Traditional";
+    if (value < 60) return "Balanced Narrative";
+    if (value < 80) return "Adventurous";
+    return "Wild & Decadent";
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -312,10 +324,56 @@ const InputForm: React.FC<InputFormProps> = ({
                 e.target.style.height = 'auto';
                 e.target.style.height = e.target.scrollHeight + 'px';
               }}
-              placeholder="e.g. Relaxing beach getaway, intense business meetings, exploring ancient ruins..."
+              placeholder="e.g. Instagrammable, board/business meeting, exploring..."
               className="w-full bg-neutral-800/30 border border-neutral-700 rounded-lg p-4 text-white focus:outline-none focus:border-neutral-500 min-h-[6rem] resize-y transition-colors text-sm overflow-hidden"
               disabled={isLoading}
             />
+          </div>
+
+          <div className="pt-4 border-t border-neutral-800">
+            <div className="flex items-center gap-2 mb-2">
+                <label htmlFor="tone" className="block text-xs text-neutral-400 uppercase tracking-widest">
+                    Narrative Tone
+                </label>
+                
+                {/* Tooltip Wrapper */}
+                <div className="group relative">
+                    <HelpCircle className="w-4 h-4 text-neutral-500 cursor-help" />
+                    
+                    {/* Tooltip Content (Hidden by default, shows on hover) */}
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-3 bg-neutral-800 text-neutral-200 text-xs rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-20 pointer-events-none normal-case tracking-normal">
+                        This slider sets the mood of your storyteller. 
+                        <br/><br/>
+                        <b>Low:</b> Classic, sweet, and traditional descriptions.
+                        <br/>
+                        <b>High:</b> Wild, decadent, or experimental narrative style.
+                        
+                        {/* Tooltip Arrow */}
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-neutral-800"></div>
+                    </div>
+                </div>
+            </div>
+            
+            {/* The Actual Slider */}
+            <div className="pt-2">
+              <input
+                  id="tone"
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={tone}
+                  onChange={(e) => setTone(Number(e.target.value))}
+                  className="w-full h-2 bg-neutral-800 rounded-lg appearance-none cursor-pointer accent-white"
+                  disabled={isLoading}
+              />
+              
+              {/* Dynamic Labels Below Slider */}
+              <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-neutral-500 mt-2">
+                  <span>Classic</span>
+                  <span className="text-white">{getToneLabel(tone)}</span>
+                  <span>Wild</span>
+              </div>
+            </div>
           </div>
         </div>
       </motion.div>
@@ -425,6 +483,7 @@ const InputForm: React.FC<InputFormProps> = ({
           attire={attire} 
           who={who} 
           vibe={vibe}
+          tone={tone}
         />
       )}
 

@@ -9,6 +9,7 @@ const App: React.FC = () => {
   const [attire, setAttire] = useState<AttireOption>(AttireOption.WOMAN);
   const [where, setWhere] = useState('');
   const [vibe, setVibe] = useState('');
+  const [tone, setTone] = useState(50);
   
   // Extra Context
   const [userContext, setUserContext] = useState('');
@@ -31,7 +32,7 @@ const App: React.FC = () => {
     try {
       const dateString = `${dateRange.start} to ${dateRange.end}`;
       const contextWithVibe = `Trip Vibe/Goal: ${vibe}. Additional Context: ${userContext}`;
-      const data = await getStyleAdvice(who, attire, where, dateString, style, contextWithVibe, userImage, localBlend);
+      const data = await getStyleAdvice(who, attire, where, dateString, style, contextWithVibe, userImage, localBlend, tone);
       setResult(data);
     } catch (err: any) {
       console.error(err);
@@ -101,6 +102,8 @@ const App: React.FC = () => {
               setWhere={setWhere}
               vibe={vibe}
               setVibe={setVibe}
+              tone={tone}
+              setTone={setTone}
               dateRange={dateRange}
               setDateRange={setDateRange}
               style={style}

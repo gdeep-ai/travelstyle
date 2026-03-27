@@ -8,9 +8,10 @@ interface LoadingNarrativeProps {
   attire: string;
   who: string;
   vibe: string;
+  tone: number;
 }
 
-const LoadingNarrative: React.FC<LoadingNarrativeProps> = ({ where, style, attire, who, vibe }) => {
+const LoadingNarrative: React.FC<LoadingNarrativeProps> = ({ where, style, attire, who, vibe, tone }) => {
   const [visibleMessages, setVisibleMessages] = useState<string[]>([]);
 
   useEffect(() => {
@@ -19,7 +20,7 @@ const LoadingNarrative: React.FC<LoadingNarrativeProps> = ({ where, style, attir
     const fetchStream = async () => {
       try {
         setVisibleMessages([`Consulting the archives for your journey to ${where || 'parts unknown'}...`]);
-        const stream = streamLoadingNarrative(who, attire, where, style, vibe);
+        const stream = streamLoadingNarrative(who, attire, where, style, vibe, tone);
         for await (const sentence of stream) {
           if (!isMounted) break;
           setVisibleMessages(prev => [...prev, sentence]);
@@ -36,7 +37,7 @@ const LoadingNarrative: React.FC<LoadingNarrativeProps> = ({ where, style, attir
     return () => {
       isMounted = false;
     };
-  }, [where, style, attire, who, vibe]);
+  }, [where, style, attire, who, vibe, tone]);
 
   return (
     <div className="w-full max-w-2xl mx-auto mt-12 p-8 border border-neutral-800 bg-neutral-900/50 rounded-xl">

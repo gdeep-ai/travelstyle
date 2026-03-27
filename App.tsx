@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
-import { StyleOption, PredictionResult, DateRange, GenderOption } from './types';
+import { StyleOption, PredictionResult, DateRange, AttireOption } from './types';
 import { getStyleAdvice } from './services/geminiService';
 import InputForm from './components/InputForm';
 import ResultDisplay from './components/ResultDisplay';
 
 const App: React.FC = () => {
   const [who, setWho] = useState('');
-  const [gender, setGender] = useState<GenderOption>(GenderOption.FEMALE);
+  const [attire, setAttire] = useState<AttireOption>(AttireOption.WOMAN);
   const [where, setWhere] = useState('');
+  const [vibe, setVibe] = useState('');
   
   // Extra Context
   const [userContext, setUserContext] = useState('');
@@ -28,7 +29,8 @@ const App: React.FC = () => {
     setError(null);
     try {
       const dateString = `${dateRange.start} to ${dateRange.end}`;
-      const data = await getStyleAdvice(who, gender, where, dateString, style, userContext, userImage);
+      const contextWithVibe = `Trip Vibe/Goal: ${vibe}. Additional Context: ${userContext}`;
+      const data = await getStyleAdvice(who, attire, where, dateString, style, contextWithVibe, userImage);
       setResult(data);
     } catch (err: any) {
       console.error(err);
@@ -55,21 +57,28 @@ const App: React.FC = () => {
       {/* Editorial Header Line */}
       <div className="border-b border-neutral-900 py-4 mb-12">
         <div className="container mx-auto px-6 flex justify-between items-center">
-            <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-neutral-500">Vol. 01</span>
-            <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-neutral-500">Est. 2024</span>
+            <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-neutral-400">Vol. 01</span>
+            <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-neutral-400">Est. 2024</span>
         </div>
       </div>
 
       <div className="relative z-10 container mx-auto px-6 pb-20 flex flex-col items-center min-h-screen">
         
         {/* Header */}
-        <header className="text-center mb-20">
-             <h1 className="text-6xl md:text-9xl font-serif text-white tracking-tighter mb-6">
-               VogueCast
+        <header className="text-center mb-8">
+             <h1 className="text-4xl md:text-6xl font-serif text-white tracking-tighter mb-3">
+               StyleTravel
              </h1>
-          <p className="text-neutral-400 text-sm md:text-base uppercase tracking-[0.2em] max-w-xl mx-auto border-t border-b border-neutral-800 py-4">
-            Curated Forecasts • Bespoke Styling • Editorial Vision
-          </p>
+             <div className="flex flex-col items-center gap-2">
+               <a href="#editorial-vision" className="text-neutral-300 text-[10px] uppercase tracking-[0.2em] hover:text-white transition-colors">
+                 Editorial Vision
+               </a>
+               <div className="flex gap-4 text-neutral-400 text-[9px] uppercase tracking-[0.2em] border-t border-b border-neutral-800 py-2 w-full max-w-lg justify-center">
+                 <a href="#weather-travel" className="hover:text-white transition-colors">Weather/Travel</a>
+                 <span>•</span>
+                 <a href="#bespoke-styling" className="hover:text-white transition-colors">Bespoke Styling Curation</a>
+               </div>
+             </div>
         </header>
 
         {/* Dynamic Content */}
@@ -84,10 +93,12 @@ const App: React.FC = () => {
             <InputForm
               who={who}
               setWho={setWho}
-              gender={gender}
-              setGender={setGender}
+              attire={attire}
+              setAttire={setAttire}
               where={where}
               setWhere={setWhere}
+              vibe={vibe}
+              setVibe={setVibe}
               dateRange={dateRange}
               setDateRange={setDateRange}
               style={style}
@@ -103,13 +114,14 @@ const App: React.FC = () => {
             <ResultDisplay 
               data={result} 
               selectedStyle={style} 
+              attire={attire}
               onReset={handleReset} 
             />
           )}
         </main>
         
-        <footer className="mt-32 text-neutral-700 text-xs uppercase tracking-[0.2em]">
-          <p>© VogueCast Digital • Powered by Gemini</p>
+        <footer className="mt-32 text-neutral-500 text-xs uppercase tracking-[0.2em]">
+          <p>© StyleTravel Digital</p>
         </footer>
       </div>
     </div>

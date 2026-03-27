@@ -1,6 +1,10 @@
 export interface WeatherData {
   location: string;
-  temperature: string;
+  temperature: {
+    celsius: number;
+    fahrenheit: number;
+    note: string;
+  };
   condition: string;
   description: string;
   seasonalContext: string;
@@ -17,6 +21,7 @@ export interface OutfitData {
   day: SingleOutfit;
   evening: SingleOutfit;
   dinner: SingleOutfit;
+  nightOut: SingleOutfit;
 }
 
 export interface PredictionResult {
@@ -32,17 +37,15 @@ export enum StyleOption {
   BUSINESS_PRO = 'Business Professional',
   FORMAL = 'Formal Event',
   ATHLEISURE = 'Athleisure / Sporty',
-  TRENDY = 'Trendy / Night Out',
+  TRENDY = 'Trendy',
+  NIGHT_OUT = 'Night Out',
   MINIMALIST = 'Minimalist / Clean',
 }
 
-export enum GenderOption {
-  FEMALE = 'Female',
-  MALE = 'Male',
-  NON_BINARY = 'Non-Binary',
-  GENDERQUEER = 'Genderqueer',
-  AGENDER = 'Agender',
-  PREFER_NOT_TO_SAY = 'Prefer not to say'
+export enum AttireOption {
+  WOMAN = 'Woman',
+  MAN = 'Man',
+  NEUTRAL = 'Neutral'
 }
 
 export interface DateRange {

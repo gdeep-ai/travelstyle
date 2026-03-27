@@ -5,14 +5,18 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "lint": "tsc --noEmit",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
+    "@google/genai": "^1.30.0",
+    "clsx": "^2.1.1",
     "lucide-react": "^0.555.0",
+    "motion": "^12.38.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "@google/genai": "^1.30.0"
+    "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

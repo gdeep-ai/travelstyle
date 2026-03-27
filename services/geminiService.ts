@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { PredictionResult, StyleOption, GenderOption } from "../types";
+import { PredictionResult, StyleOption, AttireOption } from "../types";
 
 // Initialize the client
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -9,7 +9,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
  */
 export const getStyleAdvice = async (
   who: string,
-  gender: GenderOption,
+  attire: AttireOption,
   where: string,
   dateRange: string,
   style: StyleOption,
@@ -22,34 +22,47 @@ export const getStyleAdvice = async (
     I need you to act as an expert Editor-in-Chief of a high-end fashion publication (like Vogue, GQ, Harper's Bazaar) and a meteorologist.
     
     User Profile:
-    - Identity: ${who}
-    - Gender Identity: ${gender}
+    - Identity: ${who || "Not specified (assume middle-of-the-road persona)"}
+    - Attire Preference: ${attire}
     - Destination: ${where}
-    - Date Range: ${dateRange}
+    - Date Range: ${dateRange || "Not specified (assume current season for the location)"}
     - Aesthetic: ${style}
     - Wardrobe Constraints/Favorites: ${userContext || "None provided"}
     
     ${userImageBase64 ? "NOTE: An image of a specific item or inspiration has been provided. Analyze this image and try to INCORPORATE this item or its style into at least one of the outfit scenarios." : ""}
 
+    SPECIAL INSTRUCTIONS FOR DEFAULTS & STYLE:
+    - If "Wardrobe Constraints/Favorites" or "Trip Vibe/Goal" are left blank, favor a blend of "Casual & Comfy", "Minimalist / Clean", and "Trendy" to present a flexible gender-appropriate palette that works for most folks without over/under-dressing.
+    - NO NORMCORE EVER. Avoid generic, uninspired "dad" or "basic" looks.
+    - NO CROCS. NO HIGH-WAISTED PANTS.
+    - Focus on TIMELESS, stylish pieces even when going with Trendy or Night Out styles.
+    - For the location, be okay with accepting just a state or a country (e.g., "Uzbekistan") and provide general recommendations based on that region's climate and culture.
+
     Part 1: Weather Research & Analysis
-    1. Retrieve historical weather data for "${where}" during the dates "${dateRange}" for the past 5 years.
+    1. Retrieve historical weather data for "${where}" during the dates "${dateRange || "the current month"}" for the past 5 years.
     2. Find the forecast for "${where}" during this period.
     3. COMPARE historical patterns with predicted conditions.
     
-    Part 2: Style Advice (Three Scenarios)
-    Suggest THREE distinct outfit options for the user's trip. 
-    Tone: Editorial, sophisticated, authoritative but accessible. Use fashion terminology appropriate for ${gender}.
+    Part 2: Style Advice (Four Scenarios)
+    Suggest FOUR distinct outfit options for the user's trip. 
+    Tone: Editorial, sophisticated, authoritative but accessible. Use fashion terminology appropriate for ${attire}.
     
     Scenarios:
     1. Daytime (Functional/Activity based)
-    2. Evening (Relaxed/Transition)
+    2. Afternoon/Evening (Relaxed/Transition)
     3. Nice Dinner (Elevated/Going Out)
+    4. Night Out (Drinks/Late Night)
     
-    Guidelines:
+    CRITICAL STYLING RULES:
+    - DO NOT make outfits fully monochromatic. Use a balanced, shoppable matching palette.
+    - ALWAYS include a belt if wearing trousers or jeans.
+    - ALWAYS include at least: shirt/top, pants/bottoms, and shoes.
+    - REPURPOSE items across scenarios to minimize packing.
+    - DO NOT include cologne or perfume.
+    - ONLY include a pocket square if the outfit includes a sports coat or suit jacket.
     - Focus on timeless, stylish pieces mixed with modern trends.
     - Be clear and specific (e.g., "Cashmere turtleneck", "Selvedge denim", "Double-breasted blazer").
-    - The "seasonalContext" should be concise and formatted for quick reading (bullet points).
-    - Ensure suggestions align with the Gender Identity: ${gender}.
+    - Ensure suggestions align with the Attire Preference: ${attire}.
     
     Output Format:
     You MUST return the result as a raw JSON object (no markdown).
@@ -57,9 +70,13 @@ export const getStyleAdvice = async (
     {
       "weather": {
         "location": "City/Place Name",
-        "temperature": "e.g. 24°C / 75°F (Average)",
+        "temperature": {
+          "celsius": 24,
+          "fahrenheit": 75,
+          "note": "Day High"
+        },
         "condition": "e.g. Sunny, Rainy",
-        "description": "Short, punchy forecast summary.",
+        "description": "Short, punchy forecast summary. Use line breaks (\\n) for readability instead of one long paragraph.",
         "seasonalContext": "Analysis of historical vs current. Use • bullets."
       },
       "outfits": {
@@ -70,13 +87,19 @@ export const getStyleAdvice = async (
           "colorPalette": ["Hex1", "Hex2", "Hex3"]
         },
         "evening": {
-          "headline": "Evening Transition",
+          "headline": "Afternoon Transition",
           "description": "Editorial description of the look.",
           "items": ["Item 1", "Item 2", "Item 3", "Item 4"],
           "colorPalette": ["Hex1", "Hex2", "Hex3"]
         },
         "dinner": {
           "headline": "The Dinner Cut",
+          "description": "Editorial description of the look.",
+          "items": ["Item 1", "Item 2", "Item 3", "Item 4"],
+          "colorPalette": ["Hex1", "Hex2", "Hex3"]
+        },
+        "nightOut": {
+          "headline": "Night Out",
           "description": "Editorial description of the look.",
           "items": ["Item 1", "Item 2", "Item 3", "Item 4"],
           "colorPalette": ["Hex1", "Hex2", "Hex3"]
@@ -151,7 +174,23 @@ export const generateOutfitImage = async (outfitDescription: string, style: stri
   `;
 
   if (focusColor) {
-    prompt += ` Emphasis on the color ${focusColor}. The lighting and accessories should highlight ${focusColor} tones.`;
+    if (focusColor.includes('/')) {
+      const [p, a] = focusColor.split('/');
+      prompt += ` 
+        COLOR DIRECTION: 
+        - Primary/Dominant Color: ${p}. The largest pieces (coat, trousers, dress) MUST be in this shade.
+        - Accent/Secondary Color: ${a}. Use this for accessories, shoes, or subtle patterns.
+        The visual contrast between ${p} and ${a} should be the central theme of the image. 
+        Ensure the colors are BOLD and highly saturated.
+      `;
+    } else {
+      prompt += ` 
+        COLOR SATURATION: ${focusColor}. 
+        The entire outfit MUST be dominated by ${focusColor}. 
+        The lighting should have a subtle tint of ${focusColor} to reinforce the theme. 
+        Make the color selection UNMISTAKABLE and VIBRANT.
+      `;
+    }
   }
 
   try {

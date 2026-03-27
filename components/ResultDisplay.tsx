@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { PredictionResult, StyleOption, SingleOutfit } from '../types';
 import { generateOutfitImage } from '../services/geminiService';
 import { ExternalLink, RefreshCw, ChevronDown, ChevronUp, Search, Shirt, Glasses, Briefcase, Watch, Footprints, CheckCircle2, Luggage, Minus, ArrowDown, Layers, ArrowRight } from 'lucide-react';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../firebase';
 
 interface ResultDisplayProps {
   data: PredictionResult;
@@ -88,6 +90,19 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, atti
         setImageError(result.error);
         if (result.url && !activePaletteColor) {
           setGeneratedImages(prev => ({ ...prev, [activeTab]: result.url! }));
+          
+          // Save to Firebase for inspiration carousel
+          try {
+            await addDoc(collection(db, 'inspirations'), {
+              imageUrl: result.url,
+              location: data.weather.location,
+              style: selectedStyle,
+              attire: attire,
+              createdAt: serverTimestamp()
+            });
+          } catch (e) {
+            console.error("Error saving inspiration to Firebase:", e);
+          }
         }
         setLoadingImage(false);
       }

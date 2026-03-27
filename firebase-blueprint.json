@@ -1,0 +1,40 @@
+{
+  "entities": {
+    "Inspiration": {
+      "title": "Inspiration",
+      "description": "A cached outfit inspiration generated for a specific location and style.",
+      "type": "object",
+      "properties": {
+        "imageUrl": {
+          "type": "string",
+          "description": "The URL of the generated image."
+        },
+        "location": {
+          "type": "string",
+          "description": "The destination city or country."
+        },
+        "style": {
+          "type": "string",
+          "description": "The aesthetic style of the outfit."
+        },
+        "attire": {
+          "type": "string",
+          "description": "The attire preference (e.g., Menswear, Womenswear)."
+        },
+        "createdAt": {
+          "type": "timestamp",
+          "description": "When this inspiration was generated."
+        }
+      },
+      "required": ["imageUrl", "location", "style", "attire", "createdAt"]
+    }
+  },
+  "firestore": {
+    "inspirations": {
+      "schema": {
+        "$ref": "#/entities/Inspiration"
+      },
+      "description": "A collection of cached outfit inspirations."
+    }
+  }
+}

@@ -91,11 +91,11 @@ const InputForm: React.FC<InputFormProps> = ({
   const filteredPersonas = PERSONAS.filter(p => p.toLowerCase().includes(who.toLowerCase()));
 
   const getToneLabel = (value: number) => {
-    if (value < 20) return "Classic & Sweet";
-    if (value < 40) return "Traditional";
-    if (value < 60) return "Balanced Narrative";
-    if (value < 80) return "Adventurous";
-    return "Wild & Decadent";
+    if (value < 20) return "Understated";
+    if (value < 40) return "Refined";
+    if (value < 60) return "Curated";
+    if (value < 80) return "Provocative";
+    return "Avant-Garde";
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -277,7 +277,7 @@ const InputForm: React.FC<InputFormProps> = ({
                 <div className="text-right">
                   <div className="text-xs font-medium text-white uppercase tracking-wider flex items-center justify-end gap-1">
                     Blend with Local Style
-                    <InfoTooltip text="If enabled, the AI will adapt your chosen aesthetic to match the local fashion culture of your destination." />
+                    <InfoTooltip text="If enabled, your stylist will adapt your chosen aesthetic to match the local fashion culture of your destination." />
                   </div>
                   <div className="text-[10px] text-neutral-400 uppercase tracking-widest hidden sm:block">Adapt to destination's culture</div>
                 </div>
@@ -369,9 +369,9 @@ const InputForm: React.FC<InputFormProps> = ({
               
               {/* Dynamic Labels Below Slider */}
               <div className="flex justify-between text-[10px] uppercase tracking-wider font-bold text-neutral-500 mt-2">
-                  <span>Classic</span>
+                  <span>Understated</span>
                   <span className="text-white">{getToneLabel(tone)}</span>
-                  <span>Wild</span>
+                  <span>Avant-Garde</span>
               </div>
             </div>
           </div>
@@ -403,7 +403,7 @@ const InputForm: React.FC<InputFormProps> = ({
                     className="w-full bg-neutral-800/30 border border-neutral-700 rounded-lg p-4 text-neutral-300 focus:outline-none focus:border-neutral-500 h-32 resize-none transition-colors text-sm"
                 />
                 <p className="mt-2 text-xs text-neutral-400 italic tracking-wider uppercase">
-                  Leave blank to let the AI curate your entire wardrobe from scratch.
+                  Leave blank, your stylist will work around it.
                 </p>
             </div>
             
@@ -466,11 +466,11 @@ const InputForm: React.FC<InputFormProps> = ({
           `}
         >
           {isLoading ? (
-            "Reading your vibe, crafting the inspiration..."
+            "Curating your bespoke collection..."
           ) : (
             <>
               <Luggage size={20} />
-              Let's get that packing list inspiration going
+              Curate Bespoke Collection
             </>
           )}
         </button>

@@ -13,6 +13,7 @@ const App: React.FC = () => {
   // Extra Context
   const [userContext, setUserContext] = useState('');
   const [userImage, setUserImage] = useState<string | null>(null);
+  const [localBlend, setLocalBlend] = useState(false);
 
   // Default date range
   const today = new Date().toISOString().split('T')[0];
@@ -30,7 +31,7 @@ const App: React.FC = () => {
     try {
       const dateString = `${dateRange.start} to ${dateRange.end}`;
       const contextWithVibe = `Trip Vibe/Goal: ${vibe}. Additional Context: ${userContext}`;
-      const data = await getStyleAdvice(who, attire, where, dateString, style, contextWithVibe, userImage);
+      const data = await getStyleAdvice(who, attire, where, dateString, style, contextWithVibe, userImage, localBlend);
       setResult(data);
     } catch (err: any) {
       console.error(err);
@@ -46,6 +47,7 @@ const App: React.FC = () => {
     setWhere('');
     setUserContext('');
     setUserImage(null);
+    setLocalBlend(false);
     const t = new Date().toISOString().split('T')[0];
     setDateRange({ start: t, end: t });
     setError(null);
@@ -57,8 +59,8 @@ const App: React.FC = () => {
       {/* Editorial Header Line */}
       <div className="border-b border-neutral-900 py-4 mb-12">
         <div className="container mx-auto px-6 flex justify-between items-center">
-            <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-neutral-400">Vol. 01</span>
-            <span className="text-[10px] uppercase tracking-[0.3em] font-bold text-neutral-400">Est. 2024</span>
+            <span className="text-xs uppercase tracking-[0.3em] font-bold text-neutral-400">Vol. 01</span>
+            <span className="text-xs uppercase tracking-[0.3em] font-bold text-neutral-400">Est. 2024</span>
         </div>
       </div>
 
@@ -70,10 +72,10 @@ const App: React.FC = () => {
                StyleTravel
              </h1>
              <div className="flex flex-col items-center gap-2">
-               <a href="#editorial-vision" className="text-neutral-300 text-[10px] uppercase tracking-[0.2em] hover:text-white transition-colors">
+               <a href="#editorial-vision" className="text-neutral-300 text-xs uppercase tracking-[0.2em] hover:text-white transition-colors">
                  Editorial Vision
                </a>
-               <div className="flex gap-4 text-neutral-400 text-[9px] uppercase tracking-[0.2em] border-t border-b border-neutral-800 py-2 w-full max-w-lg justify-center">
+               <div className="flex gap-4 text-neutral-400 text-xs uppercase tracking-[0.2em] border-t border-b border-neutral-800 py-2 w-full max-w-lg justify-center">
                  <a href="#weather-travel" className="hover:text-white transition-colors">Weather/Travel</a>
                  <span>•</span>
                  <a href="#bespoke-styling" className="hover:text-white transition-colors">Bespoke Styling Curation</a>
@@ -107,6 +109,8 @@ const App: React.FC = () => {
               setUserContext={setUserContext}
               userImage={userImage}
               setUserImage={setUserImage}
+              localBlend={localBlend}
+              setLocalBlend={setLocalBlend}
               onSubmit={handleSubmit}
               isLoading={isLoading}
             />

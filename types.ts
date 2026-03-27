@@ -15,9 +15,11 @@ export interface SingleOutfit {
   description: string;
   items: string[];
   colorPalette: string[];
+  brandDNA: string[];
 }
 
 export interface OutfitData {
+  travel: SingleOutfit;
   day: SingleOutfit;
   evening: SingleOutfit;
   dinner: SingleOutfit;
@@ -43,9 +45,9 @@ export enum StyleOption {
 }
 
 export enum AttireOption {
-  WOMAN = 'Woman',
-  MAN = 'Man',
-  NEUTRAL = 'Neutral'
+  WOMAN = 'Womenswear',
+  MAN = 'Menswear',
+  NEUTRAL = 'Gender Neutral'
 }
 
 export interface DateRange {

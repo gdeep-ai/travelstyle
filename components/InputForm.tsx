@@ -1,7 +1,8 @@
 import React, { useRef, useState } from 'react';
 import { StyleOption, DateRange, AttireOption } from '../types';
-import { MapPin, User, Calendar, Shirt, Camera, X, Info, Sparkles, Briefcase, Coffee, Compass, Gem, Navigation, ChevronDown, Dumbbell, Flame, Luggage, Martini, Glasses, UserCheck } from 'lucide-react';
+import { MapPin, User, Calendar, Shirt, Camera, X, Info, Sparkles, Briefcase, Coffee, Compass, Gem, Navigation, ChevronDown, Dumbbell, Flame, Luggage, Martini, Glasses, UserCheck, HelpCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import LoadingNarrative from './LoadingNarrative';
 
 interface InputFormProps {
   who: string;
@@ -20,44 +21,43 @@ interface InputFormProps {
   setUserContext: (val: string) => void;
   userImage: string | null;
   setUserImage: (val: string | null) => void;
+  localBlend: boolean;
+  setLocalBlend: (val: boolean) => void;
   onSubmit: () => void;
   isLoading: boolean;
 }
 
 const PERSONAS = [
   "Busy Parent",
-  "Low-Budget Backpacker",
-  "Frugal Traveler",
-  "Explorer",
-  "Digital Nomad",
+  "Frugal Backpacker",
+  "Digital Nomad / Creative",
   "Luxury Vacationer",
-  "Creative Professional",
   "Business Executive",
-  "Student on a Budget",
   "Honeymooner",
-  "Solo Adventurer",
-  "Retiree Explorer"
+  "Solo Adventurer"
 ];
-
-const FormalIcon = () => (
-  <div className="flex items-center gap-1">
-    <Gem size={16} />
-    <span className="text-neutral-400">/</span>
-    <User size={16} />
-  </div>
-);
 
 const STYLE_DETAILS = [
   { value: StyleOption.CASUAL, icon: Coffee, desc: "Relaxed, comfortable, everyday wear." },
   { value: StyleOption.SMART_CASUAL, icon: Glasses, desc: "Aviators & effortless cool." },
   { value: StyleOption.BUSINESS_CASUAL, icon: Shirt, desc: "Sports coat, open collar." },
   { value: StyleOption.BUSINESS_PRO, icon: UserCheck, desc: "Sharp tailoring & ties." },
-  { value: StyleOption.FORMAL, icon: FormalIcon, desc: "Top Hat / Evening Gown." },
+  { value: StyleOption.FORMAL, icon: Gem, desc: "Dressy. Tux/Suit." },
   { value: StyleOption.ATHLEISURE, icon: Dumbbell, desc: "Sporty, active, comfortable." },
   { value: StyleOption.TRENDY, icon: Flame, desc: "Fashion-forward, current, bold." },
   { value: StyleOption.NIGHT_OUT, icon: Martini, desc: "Cocktails & late nights." },
   { value: StyleOption.MINIMALIST, icon: Shirt, desc: "Clean lines, neutral colors, simple." },
 ];
+
+const InfoTooltip = ({ text }: { text: string }) => (
+  <div className="relative inline-block group ml-2 align-middle">
+    <HelpCircle size={14} className="text-neutral-500 hover:text-neutral-300 cursor-help" />
+    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block w-48 p-2 bg-neutral-800 text-neutral-200 text-xs rounded shadow-xl z-50 pointer-events-none normal-case tracking-normal">
+      {text}
+      <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-neutral-800"></div>
+    </div>
+  </div>
+);
 
 const InputForm: React.FC<InputFormProps> = ({
   who,
@@ -76,6 +76,8 @@ const InputForm: React.FC<InputFormProps> = ({
   setUserContext,
   userImage,
   setUserImage,
+  localBlend,
+  setLocalBlend,
   onSubmit,
   isLoading,
 }) => {
@@ -115,13 +117,16 @@ const InputForm: React.FC<InputFormProps> = ({
             onMouseEnter={() => setShowPersonas(true)}
             onMouseLeave={() => setShowPersonas(false)}
           >
-            <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-2">Who are you?</label>
+            <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-2">
+              Your Travel Persona
+              <InfoTooltip text="Select or type a persona that best describes your travel style." />
+            </label>
             <input
               type="text"
               value={who}
               onChange={(e) => setWho(e.target.value)}
-              placeholder="e.g. Busy Parent, Explorer..."
-              className={`w-full bg-transparent border-b border-neutral-700 pb-3 text-xl focus:outline-none focus:border-white transition-colors placeholder:text-neutral-500 ${who ? 'text-white' : 'text-neutral-400'}`}
+              placeholder="e.g. Stylish, Classic, Jetset..."
+              className={`w-full bg-transparent border-b border-neutral-700 pb-3 text-base md:text-lg focus:outline-none focus:border-white transition-colors placeholder:text-neutral-500 ${who ? 'text-white' : 'text-neutral-400'}`}
               disabled={isLoading}
             />
             <AnimatePresence>
@@ -147,15 +152,20 @@ const InputForm: React.FC<InputFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-2">Attire</label>
-            <div className="flex flex-wrap gap-2">
-              {Object.values(AttireOption).map((g) => (
+            <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-2">
+              Attire
+              <InfoTooltip text="Choose the clothing category you prefer." />
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {Object.values(AttireOption).map((g, idx) => (
                 <button
                   key={g}
                   type="button"
                   onClick={() => setAttire(g as AttireOption)}
                   disabled={isLoading}
-                  className={`flex-1 min-w-[80px] py-3 px-4 rounded-lg border text-sm transition-all ${
+                  className={`py-2 px-3 rounded-lg border text-xs md:text-sm transition-all ${
+                    idx === 2 ? 'col-span-2' : ''
+                  } ${
                     attire === g 
                       ? 'bg-neutral-800 border-white text-white shadow-lg shadow-white/5' 
                       : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:bg-neutral-800/50'
@@ -183,19 +193,25 @@ const InputForm: React.FC<InputFormProps> = ({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
           <div>
-            <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-2">Where to? <span className="text-red-500">*</span></label>
+            <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-2">
+              Where to? <span className="text-red-500">*</span>
+              <InfoTooltip text="Enter the city or country you are traveling to." />
+            </label>
             <input
               type="text"
               value={where}
               onChange={(e) => setWhere(e.target.value)}
-              placeholder="City, Country or just Country..."
-              className="w-full bg-transparent border-b border-neutral-700 text-white pb-3 text-xl focus:outline-none focus:border-white transition-colors placeholder:text-neutral-500"
+              placeholder="e.g. Paris, Tokyo, New York..."
+              className="w-full bg-transparent border-b border-neutral-700 text-white pb-3 text-base md:text-lg focus:outline-none focus:border-white transition-colors placeholder:text-neutral-500"
               disabled={isLoading}
             />
           </div>
 
           <div>
-            <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-2">Travel Dates</label>
+            <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-2">
+              Travel Dates
+              <InfoTooltip text="Select your travel dates to get weather-appropriate recommendations." />
+            </label>
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
               <div className="w-full sm:flex-1">
                 <input
@@ -235,7 +251,30 @@ const InputForm: React.FC<InputFormProps> = ({
 
         <div className="space-y-10">
           <div>
-            <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-4">Select your primary aesthetic</label>
+            <div className="flex items-center justify-between mb-4">
+              <label className="block text-xs text-neutral-400 uppercase tracking-widest">
+                Select your primary aesthetic
+                <InfoTooltip text="Choose the overall style direction for your trip's wardrobe." />
+              </label>
+              
+              {/* Local Blend Toggle */}
+              <div 
+                className="flex items-center gap-3 cursor-pointer group"
+                onClick={() => setLocalBlend(!localBlend)}
+              >
+                <div className="text-right">
+                  <div className="text-xs font-medium text-white uppercase tracking-wider flex items-center justify-end gap-1">
+                    Blend with Local Style
+                    <InfoTooltip text="If enabled, the AI will adapt your chosen aesthetic to match the local fashion culture of your destination." />
+                  </div>
+                  <div className="text-[10px] text-neutral-400 uppercase tracking-widest hidden sm:block">Adapt to destination's culture</div>
+                </div>
+                <div className={`w-10 h-5 rounded-full transition-colors flex items-center px-1 ${localBlend ? 'bg-white' : 'bg-neutral-700'}`}>
+                  <div className={`w-3 h-3 rounded-full transition-transform ${localBlend ? 'bg-black translate-x-5' : 'bg-neutral-400 translate-x-0'}`} />
+                </div>
+              </div>
+            </div>
+            
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
               {STYLE_DETAILS.map((s) => {
                 const Icon = s.icon;
@@ -253,7 +292,7 @@ const InputForm: React.FC<InputFormProps> = ({
                     <Icon size={20} className={isSelected ? "text-white" : "text-neutral-400 group-hover:text-neutral-300"} />
                     <div>
                       <div className="font-medium text-sm mb-1">{s.value}</div>
-                      <div className="text-[10px] text-neutral-400 leading-tight">{s.desc}</div>
+                      <div className="text-xs text-neutral-400 leading-tight">{s.desc}</div>
                     </div>
                   </button>
                 );
@@ -262,7 +301,10 @@ const InputForm: React.FC<InputFormProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-2">Trip Goal / Vibe</label>
+            <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-2">
+              Trip Goal / Vibe
+              <InfoTooltip text="Describe the purpose of your trip or the general feeling you want your outfits to convey." />
+            </label>
             <textarea
               value={vibe}
               onChange={(e) => {
@@ -292,20 +334,26 @@ const InputForm: React.FC<InputFormProps> = ({
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div className="md:col-span-2">
-                <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-2">Constraints & Favorites</label>
+                <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-2">
+                  Constraints & Favorites
+                  <InfoTooltip text="List items you must bring, colors you hate, or any specific dress codes." />
+                </label>
                 <textarea
                     value={userContext}
                     onChange={(e) => setUserContext(e.target.value)}
-                    placeholder="Describe specific items you want to pack, your favorites, or what you absolutely refuse to wear..."
+                    placeholder="Tell me about your non-negotiables. e.g. 'I'm bringing my favorite vintage leather jacket,' 'Absolutely no neon colors,' 'I need outfits that transition from day to night,' or 'I'm packing light, so everything must mix and match.'"
                     className="w-full bg-neutral-800/30 border border-neutral-700 rounded-lg p-4 text-neutral-300 focus:outline-none focus:border-neutral-500 h-32 resize-none transition-colors text-sm"
                 />
-                <p className="mt-2 text-[10px] text-neutral-500 italic tracking-wider uppercase">
-                  So a trip go by would be with no direction I'll assume you prefer going rando.
+                <p className="mt-2 text-xs text-neutral-400 italic tracking-wider uppercase">
+                  Leave blank to let the AI curate your entire wardrobe from scratch.
                 </p>
             </div>
             
             <div className="flex flex-col">
-                <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-2">Inspiration Image</label>
+                <label className="block text-xs text-neutral-400 uppercase tracking-widest mb-2">
+                  Inspiration Image
+                  <InfoTooltip text="Upload a photo of a piece of clothing you want to build an outfit around." />
+                </label>
                 <input 
                     type="file" 
                     ref={fileInputRef} 
@@ -364,11 +412,21 @@ const InputForm: React.FC<InputFormProps> = ({
           ) : (
             <>
               <Luggage size={20} />
-              Let's curate your packing list
+              Let's get that packing list inspiration going
             </>
           )}
         </button>
       </motion.div>
+
+      {isLoading && (
+        <LoadingNarrative 
+          where={where} 
+          style={style} 
+          attire={attire} 
+          who={who} 
+          vibe={vibe}
+        />
+      )}
 
     </div>
   );

@@ -13,6 +13,10 @@
           "type": "string",
           "description": "The destination city or country."
         },
+        "season": {
+          "type": "string",
+          "description": "The season of the destination (e.g., Spring, Summer)."
+        },
         "style": {
           "type": "string",
           "description": "The aesthetic style of the outfit."

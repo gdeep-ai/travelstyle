@@ -8,6 +8,7 @@ export interface WeatherData {
   condition: string;
   description: string;
   seasonalContext: string;
+  season: string;
 }
 
 export interface SingleOutfit {
@@ -19,11 +20,9 @@ export interface SingleOutfit {
 }
 
 export interface OutfitData {
+  daytime: SingleOutfit;
+  dinnerAndCocktails: SingleOutfit;
   travel: SingleOutfit;
-  day: SingleOutfit;
-  evening: SingleOutfit;
-  dinner: SingleOutfit;
-  nightOut: SingleOutfit;
 }
 
 export interface PredictionResult {

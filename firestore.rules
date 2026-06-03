@@ -11,6 +11,7 @@ service cloud.firestore {
     // Fields:
     //   - imageUrl: string (required) - The URL of the generated image.
     //   - location: string (required) - The destination city or country.
+    //   - season: string (optional) - The season of the destination.
     //   - style: string (required) - The aesthetic style of the outfit.
     //   - attire: string (required) - The attire preference.
     //   - createdAt: timestamp (required) - When this inspiration was generated.
@@ -33,9 +34,9 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly(fields);
     }
 
-    function isValidUrl(url) {
+    function isValidUrlOrBase64(url) {
       return url is string &&
-        (url.matches("^https://.*") || url.matches("^http://.*"));
+        (url.matches("^https://.*") || url.matches("^http://.*") || url.matches('^data:image/.*'));
     }
 
     // ===============================================================
@@ -43,9 +44,10 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidInspiration(data) {
-      return hasOnlyAllowedFields(['imageUrl', 'location', 'style', 'attire', 'createdAt']) &&
-             data.imageUrl is string && isValidUrl(data.imageUrl) && data.imageUrl.size() < 2000 &&
+      return hasOnlyAllowedFields(['imageUrl', 'location', 'season', 'style', 'attire', 'createdAt']) &&
+             data.imageUrl is string && isValidUrlOrBase64(data.imageUrl) && data.imageUrl.size() < 400000 &&
              data.location is string && data.location.size() > 0 && data.location.size() < 100 &&
+             (!('season' in data) || (data.season is string && data.season.size() < 50)) &&
              data.style is string && data.style.size() > 0 && data.style.size() < 50 &&
              data.attire is string && data.attire.size() > 0 && data.attire.size() < 50 &&
              data.createdAt is timestamp;
@@ -59,9 +61,8 @@ service cloud.firestore {
       // Anyone can read past inspirations for the carousel
       allow read: if true;
       
-      // Only authenticated users (the app backend) can create new inspirations
-      // We allow any authenticated user to create an inspiration to cache their results
-      allow create: if isAuthenticated() && isValidInspiration(request.resource.data);
+      // Allow creation by any user, as we rely strictly on payload validation without user authentication in this app
+      allow create: if isValidInspiration(request.resource.data);
       
       // Inspirations are immutable once created
       allow update, delete: if false;

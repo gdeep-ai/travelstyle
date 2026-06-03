@@ -96,7 +96,7 @@ export const getStyleAdvice = async (
   localBlend: boolean,
   tone: number
 ): Promise<PredictionResult> => {
-  const modelId = "gemini-2.5-flash"; 
+  const modelId = "gemini-3-flash-preview"; 
   
   const alignment = determineAlignment(who, style);
 
@@ -123,15 +123,13 @@ export const getStyleAdvice = async (
     - NO CROCS. NO HIGH-WAISTED PANTS.
     - Focus on TIMELESS, stylish pieces even when going with Trendy or Night Out styles.
     
-    Part 2: Style Advice (Five Scenarios)
-    Suggest FIVE distinct outfit options for the user's trip. 
+    Part 2: Style Advice (Three Scenarios)
+    Suggest THREE distinct outfit options for the user's trip. 
     
     Scenarios:
-    1. Transit / Travel Day (Comfortable, layered, practical for planes/trains. NO CROCS.)
-    2. Daytime (Functional/Activity based)
-    3. Afternoon/Evening (Relaxed/Transition)
-    4. Nice Dinner (Elevated/Going Out)
-    5. Night Out (Drinks/Late Night)
+    1. Travel (Comfortable, layered, practical for planes/trains. NO CROCS.)
+    2. Daytime (Functional/Activity based, exploring)
+    3. Dinner and Cocktails (Elevated/Going Out, evening wear)
     
     CRITICAL STYLING RULES:
     - DO NOT make outfits fully monochromatic. Use a balanced, shoppable matching palette.
@@ -155,7 +153,8 @@ export const getStyleAdvice = async (
         },
         "condition": "e.g. Sunny, Rainy",
         "description": "Short, punchy forecast summary. Use line breaks (\\n) for readability instead of one long paragraph.",
-        "seasonalContext": "Analysis of historical vs current. Use • bullets."
+        "seasonalContext": "Analysis of historical vs current. Use • bullets.",
+        "season": "e.g. Spring, Summer, Fall, Winter"
       },
       "outfits": {
         "travel": {
@@ -165,28 +164,14 @@ export const getStyleAdvice = async (
           "colorPalette": ["Hex1", "Hex2", "Hex3"],
           "brandDNA": ["Brand 1", "Brand 2"]
         },
-        "day": {
+        "daytime": {
           "headline": "A creative, catchy theme for the outfit, reflecting the player's tone and alignment.",
           "description": "A compelling explanation of why this outfit is a must-wear, focusing on craftsmanship, silhouette, or the creator's story, all framed by the storyteller persona.",
           "items": ["Item 1", "Item 2", "Item 3", "Item 4"],
           "colorPalette": ["Hex1", "Hex2", "Hex3"],
           "brandDNA": ["Brand 1", "Brand 2"]
         },
-        "evening": {
-          "headline": "A creative, catchy theme for the outfit, reflecting the player's tone and alignment.",
-          "description": "A compelling explanation of why this outfit is a must-wear, focusing on craftsmanship, silhouette, or the creator's story, all framed by the storyteller persona.",
-          "items": ["Item 1", "Item 2", "Item 3", "Item 4"],
-          "colorPalette": ["Hex1", "Hex2", "Hex3"],
-          "brandDNA": ["Brand 1", "Brand 2"]
-        },
-        "dinner": {
-          "headline": "A creative, catchy theme for the outfit, reflecting the player's tone and alignment.",
-          "description": "A compelling explanation of why this outfit is a must-wear, focusing on craftsmanship, silhouette, or the creator's story, all framed by the storyteller persona.",
-          "items": ["Item 1", "Item 2", "Item 3", "Item 4"],
-          "colorPalette": ["Hex1", "Hex2", "Hex3"],
-          "brandDNA": ["Brand 1", "Brand 2"]
-        },
-        "nightOut": {
+        "dinnerAndCocktails": {
           "headline": "A creative, catchy theme for the outfit, reflecting the player's tone and alignment.",
           "description": "A compelling explanation of why this outfit is a must-wear, focusing on craftsmanship, silhouette, or the creator's story, all framed by the storyteller persona.",
           "items": ["Item 1", "Item 2", "Item 3", "Item 4"],
@@ -212,9 +197,10 @@ export const getStyleAdvice = async (
   try {
     const response = await ai.models.generateContent({
       model: modelId,
-      contents: { role: 'user', parts: parts },
+      contents: { parts: parts },
       config: {
         tools: [{ googleSearch: {} }],
+        toolConfig: { includeServerSideToolInvocations: true }
       },
     });
 
@@ -234,7 +220,13 @@ export const getStyleAdvice = async (
       cleanJson = cleanJson.substring(firstBrace, lastBrace + 1);
     }
 
-    const parsedData = JSON.parse(cleanJson);
+    let parsedData;
+    try {
+      parsedData = JSON.parse(cleanJson);
+    } catch (e) {
+      console.error("Failed to parse JSON:", text);
+      throw new Error("The fashion oracle returned an invalid format. Please try again.");
+    }
 
     return {
       weather: parsedData.weather,
@@ -242,9 +234,9 @@ export const getStyleAdvice = async (
       groundingUrls: Array.from(new Set(groundingUrls)), 
     };
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error fetching style advice:", error);
-    throw new Error("Failed to generate advice. Please try again.");
+    throw new Error(error.message || "Failed to generate advice. Please try again.");
   }
 };
 
@@ -252,9 +244,9 @@ export const getStyleAdvice = async (
  * Generates an image of the outfit using a visual model.
  */
 export const generateOutfitImage = async (outfitDescription: string, style: string, focusColor?: string): Promise<{ url: string | null, error: string | null }> => {
-  const modelId = "gemini-2.5-flash-image";
+  const modelId = "gemini-3.1-flash-image-preview";
 
-  let prompt = `High-fashion editorial photography, flat lay of a complete outfit on a neutral concrete or marble surface. Items: ${outfitDescription}. Style: ${style}. Minimalist, chic, expensive lighting. Vibrant, high contrast, clear, and sharp.`;
+  let prompt = `High-fashion editorial photography, flat lay of a complete outfit on a clean, neutral background. Items: ${outfitDescription}. Style: ${style}. Minimalist, chic, expensive studio lighting. Vibrant, high contrast, clear, and sharp. CRITICAL INSTRUCTION: Ensure all items are laid out neatly side-by-side without overlapping or intersecting awkwardly. Belts should be placed next to or neatly coiled near pants, not floating over jackets. Accessories should be placed distinctly.`;
 
   if (focusColor) {
     if (focusColor.includes('/')) {
@@ -266,22 +258,22 @@ export const generateOutfitImage = async (outfitDescription: string, style: stri
   }
 
   try {
-    const response = await ai.models.generateContent({
-      model: modelId,
-      contents: {
-        parts: [
-          {
-            text: prompt,
-          },
-        ],
-      },
-      config: {
-        imageConfig: {
-          aspectRatio: "1:1",
-          imageSize: "1K"
+      const response = await ai.models.generateContent({
+        model: modelId,
+        contents: {
+          parts: [
+            {
+              text: prompt,
+            },
+          ],
+        },
+        config: {
+          imageConfig: {
+            aspectRatio: "3:4",
+            imageSize: "1K"
+          }
         }
-      }
-    });
+      });
 
     for (const part of response.candidates?.[0]?.content?.parts || []) {
       if (part.inlineData && part.inlineData.data) {

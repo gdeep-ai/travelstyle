@@ -27,6 +27,7 @@ interface InputFormProps {
   setLocalBlend: (val: boolean) => void;
   onSubmit: () => void;
   isLoading: boolean;
+  narrative: string;
 }
 
 const PERSONAS = [
@@ -84,6 +85,7 @@ const InputForm: React.FC<InputFormProps> = ({
   setLocalBlend,
   onSubmit,
   isLoading,
+  narrative,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showPersonas, setShowPersonas] = useState(false);
@@ -168,16 +170,14 @@ const InputForm: React.FC<InputFormProps> = ({
               Attire
               <InfoTooltip text="Choose the clothing category you prefer." />
             </label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-wrap gap-2">
               {Object.values(AttireOption).map((g, idx) => (
                 <button
                   key={g}
                   type="button"
                   onClick={() => setAttire(g as AttireOption)}
                   disabled={isLoading}
-                  className={`py-2 px-3 rounded-lg border text-xs md:text-sm transition-all ${
-                    idx === 2 ? 'col-span-2' : ''
-                  } ${
+                  className={`py-2 px-3 rounded-lg border text-xs md:text-sm transition-all flex-1 min-w-[100px] ${
                     attire === g 
                       ? 'bg-neutral-800 border-white text-white shadow-lg shadow-white/5' 
                       : 'bg-neutral-900 border-neutral-800 text-neutral-400 hover:border-neutral-600 hover:bg-neutral-800/50'
@@ -229,7 +229,13 @@ const InputForm: React.FC<InputFormProps> = ({
                 <input
                   type="date"
                   value={dateRange.start}
-                  onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+                  onChange={(e) => {
+                    const newStart = e.target.value;
+                    setDateRange(prev => ({
+                      start: newStart,
+                      end: prev.end < newStart ? newStart : prev.end
+                    }));
+                  }}
                   className="w-full bg-neutral-800/50 border border-neutral-700 rounded-md text-white px-3 py-2 text-sm focus:outline-none focus:border-neutral-500 transition-all [color-scheme:dark]"
                   disabled={isLoading}
                 />
@@ -239,6 +245,7 @@ const InputForm: React.FC<InputFormProps> = ({
                 <input
                   type="date"
                   value={dateRange.end}
+                  min={dateRange.start}
                   onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
                   className="w-full bg-neutral-800/50 border border-neutral-700 rounded-md text-white px-3 py-2 text-sm focus:outline-none focus:border-neutral-500 transition-all [color-scheme:dark]"
                   disabled={isLoading}
@@ -466,11 +473,11 @@ const InputForm: React.FC<InputFormProps> = ({
           `}
         >
           {isLoading ? (
-            "Curating your bespoke collection..."
+            "Generating your Curated Packing List..."
           ) : (
             <>
               <Luggage size={20} />
-              Curate Bespoke Collection
+              Generate Curated Packing List
             </>
           )}
         </button>
@@ -479,11 +486,7 @@ const InputForm: React.FC<InputFormProps> = ({
       {isLoading && (
         <LoadingNarrative 
           where={where} 
-          style={style} 
-          attire={attire} 
-          who={who} 
-          vibe={vibe}
-          tone={tone}
+          narrative={narrative}
         />
       )}
 

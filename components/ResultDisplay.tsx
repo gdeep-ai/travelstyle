@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { PredictionResult, StyleOption, SingleOutfit } from '../types';
 import { generateOutfitImage } from '../services/geminiService';
-import { ExternalLink, RefreshCw, ChevronDown, ChevronUp, Search, Shirt, Glasses, Briefcase, Watch, Footprints, CheckCircle2, Luggage, Minus, ArrowDown, Layers, ArrowRight } from 'lucide-react';
+import { ExternalLink, RefreshCw, ChevronDown, ChevronUp, Search, Shirt, Glasses, Briefcase, Watch, Footprints, CheckCircle2, Luggage, Minus, ArrowDown, Layers, ArrowRight, Sparkles, Camera } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -10,10 +10,12 @@ interface ResultDisplayProps {
   selectedStyle: StyleOption;
   attire: string;
   onReset: () => void;
+  vibeApproved: boolean;
+  setVibeApproved: (approved: boolean) => void;
 }
 
-const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, attire, onReset }) => {
-  const [activeTab, setActiveTab] = useState<'travel' | 'day' | 'evening' | 'dinner' | 'nightOut' | 'packingList' | 'schedule'>('travel');
+const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, attire, onReset, vibeApproved, setVibeApproved }) => {
+  const [activeTab, setActiveTab] = useState<'daytime' | 'dinnerAndCocktails' | 'travel' | 'packingList' | 'schedule'>('daytime');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [imageError, setImageError] = useState<string | null>(null);
   const [loadingImage, setLoadingImage] = useState(false);
@@ -21,9 +23,10 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, atti
   const [activePaletteColor, setActivePaletteColor] = useState<string | null>(null);
   const [tempUnit, setTempUnit] = useState<'C' | 'F'>('C');
   const [generatedImages, setGeneratedImages] = useState<Record<string, string>>({});
+  const [unlockedTabs, setUnlockedTabs] = useState<Set<string>>(new Set(['daytime']));
 
   // Tab Order for Carousel
-  const tabs: ('travel' | 'day' | 'evening' | 'dinner' | 'nightOut' | 'packingList' | 'schedule')[] = ['travel', 'day', 'evening', 'dinner', 'nightOut', 'packingList', 'schedule'];
+  const tabs: ('daytime' | 'dinnerAndCocktails' | 'travel' | 'packingList' | 'schedule')[] = ['daytime', 'dinnerAndCocktails', 'travel', 'packingList', 'schedule'];
   const activeIndex = tabs.indexOf(activeTab);
 
   // Get current active outfit data
@@ -72,6 +75,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, atti
 
     const fetchImage = async () => {
       if (!activeOutfit || activeTab === 'packingList') return;
+      if (!unlockedTabs.has(activeTab)) return;
       
       // Use cached image if no specific color is selected
       if (!activePaletteColor && generatedImages[activeTab]) {
@@ -93,9 +97,34 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, atti
           
           // Save to Firebase for inspiration carousel
           try {
+            const compressImage = async (base64Str: string): Promise<string> => {
+              return new Promise((resolve) => {
+                const img = new Image();
+                img.src = base64Str;
+                img.onload = () => {
+                  const canvas = document.createElement('canvas');
+                  const MAX_WIDTH = 400; // Resize to a thumbnail-friendly width
+                  const scaleSize = MAX_WIDTH / img.width;
+                  canvas.width = MAX_WIDTH;
+                  canvas.height = img.height * scaleSize;
+                  const ctx = canvas.getContext('2d');
+                  if (ctx) {
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    resolve(canvas.toDataURL('image/jpeg', 0.6));
+                  } else {
+                    resolve(base64Str);
+                  }
+                };
+                img.onerror = () => resolve(base64Str);
+              });
+            };
+            
+            const compressedUrl = await compressImage(result.url);
+            
             await addDoc(collection(db, 'inspirations'), {
-              imageUrl: result.url,
+              imageUrl: compressedUrl,
               location: data.weather.location,
+              season: data.weather.season || 'Unknown',
               style: selectedStyle,
               attire: attire,
               createdAt: serverTimestamp()
@@ -111,7 +140,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, atti
     fetchImage();
 
     return () => { isMounted = false; };
-  }, [activeTab, activeOutfit, selectedStyle, activePaletteColor]);
+  }, [activeTab, activeOutfit, selectedStyle, activePaletteColor, unlockedTabs]);
 
   const getSearchUrl = (item: string) => {
     const words = item.replace(/[^\w\s-]/g, '').split(' ').filter(w => w.length > 0);
@@ -220,55 +249,55 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, atti
         <div className="space-y-8 relative">
           
               {/* Tab Navigation */}
-          <div className="flex flex-col border-b border-neutral-800 pb-4 mb-8 gap-4">
+          <div className="flex flex-col border-b border-neutral-800 pb-6 mb-8 gap-4">
             <span className="text-neutral-400 text-base uppercase tracking-[0.2em] font-bold hidden sm:block">The Edit</span>
-            <div className="flex flex-wrap items-center gap-4 md:gap-6 w-full justify-start">
+            <div className="flex flex-wrap items-center gap-3 md:gap-4 w-full justify-start">
                 <button 
-                  onClick={() => setActiveTab('travel')} 
-                  className={`text-base md:text-lg uppercase tracking-widest transition-colors pb-1 border-b-2 ${activeTab === 'travel' ? 'border-white text-white' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
+                  onClick={() => setActiveTab('daytime')} 
+                  className={`text-xs md:text-sm uppercase tracking-widest transition-all px-4 py-2 rounded-full ${activeTab === 'daytime' ? 'bg-white text-black font-bold' : 'border border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-400'}`}
                 >
-                    Travel Day
+                    Daytime
                 </button>
                 <button 
-                  onClick={() => setActiveTab('day')} 
-                  className={`text-base md:text-lg uppercase tracking-widest transition-colors pb-1 border-b-2 ${activeTab === 'day' ? 'border-white text-white' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
+                  onClick={() => vibeApproved && setActiveTab('dinnerAndCocktails')} 
+                  disabled={!vibeApproved}
+                  className={`text-xs md:text-sm uppercase tracking-widest transition-all px-4 py-2 rounded-full ${activeTab === 'dinnerAndCocktails' ? 'bg-white text-black font-bold' : vibeApproved ? 'border border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-400' : 'border border-transparent text-neutral-500 opacity-30 cursor-not-allowed'}`}
                 >
-                    Morning
+                    Dinner & Cocktails
                 </button>
                 <button 
-                  onClick={() => setActiveTab('evening')} 
-                  className={`text-base md:text-lg uppercase tracking-widest transition-colors pb-1 border-b-2 ${activeTab === 'evening' ? 'border-white text-white' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
+                  onClick={() => vibeApproved && setActiveTab('travel')} 
+                  disabled={!vibeApproved}
+                  className={`text-xs md:text-sm uppercase tracking-widest transition-all px-4 py-2 rounded-full ${activeTab === 'travel' ? 'bg-white text-black font-bold' : vibeApproved ? 'border border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-400' : 'border border-transparent text-neutral-500 opacity-30 cursor-not-allowed'}`}
                 >
-                    Afternoon
+                    Travel
                 </button>
                 <button 
-                  onClick={() => setActiveTab('dinner')} 
-                  className={`text-base md:text-lg uppercase tracking-widest transition-colors pb-1 border-b-2 ${activeTab === 'dinner' ? 'border-white text-white' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
-                >
-                    Dinner Party
-                </button>
-                {data.outfits.nightOut && (
-                  <button 
-                    onClick={() => setActiveTab('nightOut')} 
-                    className={`text-base md:text-lg uppercase tracking-widest transition-colors pb-1 border-b-2 ${activeTab === 'nightOut' ? 'border-white text-white' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
-                  >
-                      Night Out
-                  </button>
-                )}
-                <button 
-                  onClick={() => setActiveTab('packingList')} 
-                  className={`text-base md:text-lg uppercase tracking-widest transition-colors pb-1 border-b-2 ml-auto ${activeTab === 'packingList' ? 'border-white text-white' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
+                  onClick={() => vibeApproved && setActiveTab('packingList')} 
+                  disabled={!vibeApproved}
+                  className={`text-xs md:text-sm uppercase tracking-widest transition-all px-4 py-2 rounded-full ml-auto ${activeTab === 'packingList' ? 'bg-white text-black font-bold' : vibeApproved ? 'border border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-400' : 'border border-transparent text-neutral-500 opacity-30 cursor-not-allowed'}`}
                 >
                     The Works
                 </button>
                 <button 
-                  onClick={() => setActiveTab('schedule')} 
-                  className={`text-base md:text-lg uppercase tracking-widest transition-colors pb-1 border-b-2 ${activeTab === 'schedule' ? 'border-white text-white' : 'border-transparent text-neutral-400 hover:text-neutral-200'}`}
+                  onClick={() => vibeApproved && setActiveTab('schedule')} 
+                  disabled={!vibeApproved}
+                  className={`text-xs md:text-sm uppercase tracking-widest transition-all px-4 py-2 rounded-full ${activeTab === 'schedule' ? 'bg-white text-black font-bold' : vibeApproved ? 'border border-neutral-700 text-neutral-400 hover:text-white hover:border-neutral-400' : 'border border-transparent text-neutral-500 opacity-30 cursor-not-allowed'}`}
                 >
                     Schedule
                 </button>
             </div>
           </div>
+
+          {vibeApproved && (
+            <div className="mb-8 p-4 bg-neutral-900/50 border border-neutral-800 rounded-lg flex items-start gap-3 animate-fade-in text-neutral-300">
+              <Sparkles className="text-white shrink-0 mt-0.5" size={18} />
+              <p className="text-sm leading-relaxed">
+                <strong className="text-white font-medium">Your full itinerary is unlocked!</strong><br/>
+                Continue clicking through the times of day (e.g., <em>Dinner Party</em>) to explore and visualize the rest of your looks.
+              </p>
+            </div>
+          )}
 
           <div className="animate-fade-in">
              {activeTab === 'schedule' ? (
@@ -295,13 +324,13 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, atti
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div>
                             <h4 className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Daytime</h4>
-                            <p className="text-sm text-neutral-200">{idx === 0 ? data.outfits.travel.headline : data.outfits.day.headline}</p>
-                            <p className="text-xs text-neutral-500 mt-1">{idx === 0 ? data.outfits.travel.items.slice(0, 3).join(', ') : data.outfits.day.items.slice(0, 3).join(', ')}</p>
+                            <p className="text-sm text-neutral-200">{idx === 0 ? data.outfits.travel.headline : data.outfits.daytime.headline}</p>
+                            <p className="text-xs text-neutral-500 mt-1">{idx === 0 ? data.outfits.travel.items.slice(0, 3).join(', ') : data.outfits.daytime.items.slice(0, 3).join(', ')}</p>
                           </div>
                           <div>
                             <h4 className="text-xs text-neutral-400 uppercase tracking-widest mb-2">Evening</h4>
-                            <p className="text-sm text-neutral-200">{idx === 0 ? data.outfits.evening.headline : data.outfits.dinner.headline}</p>
-                            <p className="text-xs text-neutral-500 mt-1">{idx === 0 ? data.outfits.evening.items.slice(0, 3).join(', ') : data.outfits.dinner.items.slice(0, 3).join(', ')}</p>
+                            <p className="text-sm text-neutral-200">{data.outfits.dinnerAndCocktails.headline}</p>
+                            <p className="text-xs text-neutral-500 mt-1">{data.outfits.dinnerAndCocktails.items.slice(0, 3).join(', ')}</p>
                           </div>
                         </div>
                       </div>
@@ -470,40 +499,61 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, atti
                         </div>
                       )}
                       
-                      {/* Next Outfit Button */}
-                      <div className="mt-12 flex justify-end border-t border-neutral-800 pt-8">
-                        {activeTab !== 'schedule' && (
-                          <button
-                            onClick={() => {
-                              const tabs = ['travel', 'day', 'evening', 'dinner', ...(data.outfits.nightOut ? ['nightOut'] : []), 'packingList', 'schedule'];
-                              const currentIndex = tabs.indexOf(activeTab);
-                              if (currentIndex < tabs.length - 1) {
-                                setActiveTab(tabs[currentIndex + 1] as any);
-                                // Scroll to top of the section smoothly
-                                document.getElementById('bespoke-styling')?.scrollIntoView({ behavior: 'smooth' });
-                              }
-                            }}
-                            className="flex items-center gap-2 text-sm uppercase tracking-widest border border-neutral-700 px-6 py-3 rounded hover:bg-neutral-800 transition-colors text-white group"
-                          >
-                            Next: {
-                              (() => {
-                                const tabs = ['travel', 'day', 'evening', 'dinner', ...(data.outfits.nightOut ? ['nightOut'] : []), 'packingList', 'schedule'];
-                                const names = {
-                                  travel: 'Travel Day',
-                                  day: 'Morning',
-                                  evening: 'Afternoon',
-                                  dinner: 'Dinner Party',
-                                  nightOut: 'Night Out',
-                                  packingList: 'The Works',
-                                  schedule: 'Schedule'
-                                };
+                      {/* Vibe Check / Next Outfit Button */}
+                      <div className="mt-12 border-t border-neutral-800 pt-8">
+                        {!vibeApproved && activeTab === 'daytime' ? (
+                          <div className="p-6 border border-neutral-700 bg-neutral-900/50 rounded-lg text-center animate-fade-in-up">
+                            <h3 className="text-xl font-serif text-white mb-2">Does this match your vibe?</h3>
+                            <p className="text-neutral-400 text-sm mb-6">Approve this aesthetic to unlock your full packing list and daily schedule.</p>
+                            <div className="flex flex-col sm:flex-row justify-center gap-4">
+                              <button 
+                                onClick={() => setVibeApproved(true)} 
+                                className="px-6 py-3 bg-white text-black text-xs uppercase tracking-widest font-bold hover:bg-neutral-200 transition-colors flex items-center justify-center gap-2"
+                              >
+                                <Sparkles size={14} />
+                                Yes, Unlock Itinerary
+                              </button>
+                              <button 
+                                onClick={onReset} 
+                                className="px-6 py-3 border border-neutral-700 text-white text-xs uppercase tracking-widest hover:bg-neutral-800 transition-colors flex items-center justify-center gap-2"
+                              >
+                                <RefreshCw size={14} />
+                                No, Start Over
+                              </button>
+                            </div>
+                          </div>
+                        ) : vibeApproved && activeTab !== 'schedule' ? (
+                          <div className="flex justify-end">
+                            <button
+                              onClick={() => {
+                                const tabs = ['daytime', 'dinnerAndCocktails', 'travel', 'packingList', 'schedule'];
                                 const currentIndex = tabs.indexOf(activeTab);
-                                return names[tabs[currentIndex + 1] as keyof typeof names];
-                              })()
-                            }
-                            <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
-                          </button>
-                        )}
+                                if (currentIndex < tabs.length - 1) {
+                                  setActiveTab(tabs[currentIndex + 1] as any);
+                                  // Scroll to top of the section smoothly
+                                  document.getElementById('bespoke-styling')?.scrollIntoView({ behavior: 'smooth' });
+                                }
+                              }}
+                              className="flex items-center gap-2 text-sm uppercase tracking-widest border border-neutral-700 px-6 py-3 rounded hover:bg-neutral-800 transition-colors text-white group"
+                            >
+                              Next: {
+                                (() => {
+                                  const tabs = ['daytime', 'dinnerAndCocktails', 'travel', 'packingList', 'schedule'];
+                                  const names = {
+                                    daytime: 'Daytime',
+                                    dinnerAndCocktails: 'Dinner & Cocktails',
+                                    travel: 'Travel',
+                                    packingList: 'The Works',
+                                    schedule: 'Schedule'
+                                  };
+                                  const currentIndex = tabs.indexOf(activeTab);
+                                  return names[tabs[currentIndex + 1] as keyof typeof names];
+                                })()
+                              }
+                              <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
+                            </button>
+                          </div>
+                        ) : null}
                       </div>
                    </div>
                  )}
@@ -544,6 +594,18 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, atti
                     {activePaletteColor && (
                         <p className="text-xs uppercase tracking-widest text-neutral-400">Focusing on {activePaletteColor}</p>
                     )}
+                  </div>
+                ) : !unlockedTabs.has(activeTab) ? (
+                  <div className="text-center p-8 flex flex-col items-center justify-center h-full">
+                    <Camera className="text-neutral-600 mb-6" size={48} />
+                    <h3 className="text-white font-serif text-2xl mb-3">Visualize This Look</h3>
+                    <p className="text-neutral-400 text-sm mb-8 max-w-xs leading-relaxed">Generate a high-fashion editorial image of this specific outfit.</p>
+                    <button 
+                      onClick={() => setUnlockedTabs(prev => new Set(prev).add(activeTab))}
+                      className="px-8 py-4 bg-white text-black text-xs uppercase tracking-widest font-bold hover:bg-neutral-200 transition-colors"
+                    >
+                      Generate Image
+                    </button>
                   </div>
                 ) : imageUrl ? (
                   <div className="relative w-full h-full group">

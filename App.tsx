@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleOption, PredictionResult, DateRange, AttireOption } from './types';
-import { getStyleAdvice } from './services/geminiService';
+import { getStyleAdvice, streamLoadingNarrative } from './services/geminiService';
 import InputForm from './components/InputForm';
 import ResultDisplay from './components/ResultDisplay';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
@@ -10,6 +10,7 @@ interface PastInspiration {
   id: string;
   imageUrl: string;
   location: string;
+  season?: string;
   style: string;
   attire: string;
 }
@@ -35,6 +36,8 @@ const App: React.FC = () => {
   const [result, setResult] = useState<PredictionResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [vibeApproved, setVibeApproved] = useState(false);
+  const [narrative, setNarrative] = useState('');
 
   const [pastInspirations, setPastInspirations] = useState<PastInspiration[]>([]);
   const [isLoadingInspirations, setIsLoadingInspirations] = useState(true);
@@ -51,6 +54,7 @@ const App: React.FC = () => {
             id: doc.id,
             imageUrl: data.imageUrl,
             location: data.location,
+            season: data.season,
             style: data.style,
             attire: data.attire,
           });
@@ -76,14 +80,23 @@ const App: React.FC = () => {
   const handleSubmit = async () => {
     setIsLoading(true);
     setError(null);
+    setVibeApproved(false);
+    setNarrative('');
     try {
+      let fullNarrative = '';
+      const stream = streamLoadingNarrative(who, attire, where, style, vibe, tone);
+      for await (const sentence of stream) {
+        fullNarrative += sentence + ' ';
+        setNarrative(fullNarrative);
+      }
+
       const dateString = `${dateRange.start} to ${dateRange.end}`;
-      const contextWithVibe = `Trip Vibe/Goal: ${vibe}. Additional Context: ${userContext}`;
+      const contextWithVibe = `Trip Vibe/Goal: ${vibe}. Additional Context: ${userContext}. Narrative to match: ${fullNarrative}`;
       const data = await getStyleAdvice(who, attire, where, dateString, style, contextWithVibe, userImage, localBlend, tone);
       setResult(data);
     } catch (err: any) {
       console.error(err);
-      setError("Failed to consult the fashion oracle. Please try again.");
+      setError(err.message || "Failed to consult the fashion oracle. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -126,7 +139,7 @@ const App: React.FC = () => {
                <div className="flex gap-4 text-neutral-400 text-xs uppercase tracking-[0.2em] border-t border-b border-neutral-800 py-2 w-full max-w-lg justify-center">
                  <a href="#weather-travel" className="hover:text-white transition-colors">Weather/Travel</a>
                  <span>•</span>
-                 <a href="#bespoke-styling" className="hover:text-white transition-colors">Bespoke Styling Curation</a>
+                 <a href="#bespoke-styling" className="hover:text-white transition-colors">Curated Packing List</a>
                </div>
              </div>
         </header>
@@ -164,6 +177,7 @@ const App: React.FC = () => {
                 setLocalBlend={setLocalBlend}
                 onSubmit={handleSubmit}
                 isLoading={isLoading}
+                narrative={narrative}
               />
               
               {/* Past Inspiration Carousel Placeholder */}
@@ -186,8 +200,8 @@ const App: React.FC = () => {
                           <img src={item.imageUrl} alt={`${item.style} in ${item.location}`} className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity duration-500" referrerPolicy="no-referrer" />
                           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent flex flex-col justify-end p-6">
                             <span className="text-[10px] text-neutral-400 uppercase tracking-widest mb-1">{item.attire}</span>
-                            <h3 className="text-white font-serif text-xl leading-tight mb-1">{item.location}</h3>
-                            <span className="text-xs text-neutral-300 uppercase tracking-wider">{item.style}</span>
+                            <h3 className="text-white font-serif text-xl leading-tight mb-1">{item.style}</h3>
+                            <span className="text-[10px] text-neutral-400 uppercase tracking-widest">{item.season ? `${item.location}, ${item.season}` : item.location}</span>
                           </div>
                         </div>
                       ))
@@ -206,6 +220,8 @@ const App: React.FC = () => {
               selectedStyle={style} 
               attire={attire}
               onReset={handleReset} 
+              vibeApproved={vibeApproved}
+              setVibeApproved={setVibeApproved}
             />
           )}
         </main>

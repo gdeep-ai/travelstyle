@@ -3,6 +3,7 @@ import { StyleOption, PredictionResult, DateRange, AttireOption } from './types'
 import { getStyleAdvice, streamLoadingNarrative } from './services/geminiService';
 import InputForm from './components/InputForm';
 import ResultDisplay from './components/ResultDisplay';
+import KineticSlamCaption from './components/KineticSlamCaption';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from './firebase';
 
@@ -14,6 +15,18 @@ interface PastInspiration {
   style: string;
   attire: string;
 }
+
+
+const isSafeInspirationImageUrl = (url: unknown): url is string => {
+  if (typeof url !== 'string') return false;
+
+  return /^https:\/\/\S+$/i.test(url) ||
+    /^data:image\/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=]+$/i.test(url);
+};
+
+const toSafeString = (value: unknown, fallback = ''): string => (
+  typeof value === 'string' ? value : fallback
+);
 
 const App: React.FC = () => {
   const [who, setWho] = useState('');
@@ -50,13 +63,17 @@ const App: React.FC = () => {
         const inspirations: PastInspiration[] = [];
         querySnapshot.forEach((doc) => {
           const data = doc.data();
+          if (!isSafeInspirationImageUrl(data.imageUrl)) {
+            return;
+          }
+
           inspirations.push({
             id: doc.id,
             imageUrl: data.imageUrl,
-            location: data.location,
-            season: data.season,
-            style: data.style,
-            attire: data.attire,
+            location: toSafeString(data.location, 'Unknown'),
+            season: typeof data.season === 'string' ? data.season : undefined,
+            style: toSafeString(data.style, 'Curated Style'),
+            attire: toSafeString(data.attire, 'Travelwear'),
           });
         });
         
@@ -114,6 +131,14 @@ const App: React.FC = () => {
     setError(null);
   };
 
+  const heroSlamWords = [
+    where || 'Pack',
+    vibe || 'Curate',
+    style.split(/[&/]/)[0] || 'Style',
+    attire.replace('wear', ''),
+    localBlend ? 'Local' : 'Travel',
+  ];
+
   return (
     <div className="min-h-screen w-full bg-[#0a0a0a] text-neutral-100 selection:bg-white selection:text-black">
       
@@ -128,15 +153,22 @@ const App: React.FC = () => {
       <div className="relative z-10 container mx-auto px-6 pb-20 flex flex-col items-center min-h-screen">
         
         {/* Header */}
-        <header className="text-center mb-8">
-             <h1 className="text-4xl md:text-6xl font-serif text-white tracking-tighter mb-3">
+        <header className="relative mb-12 w-full max-w-5xl overflow-hidden rounded-[2rem] border border-neutral-900 bg-neutral-950/70 px-4 py-8 text-center shadow-2xl shadow-black/40 md:px-10">
+             <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(110deg,rgba(255,255,255,0.08),transparent_26%,rgba(255,255,255,0.05)_52%,transparent_72%)]" />
+             <div className="relative z-10 mx-auto mb-5 max-w-3xl">
+               <KineticSlamCaption words={heroSlamWords} className="mx-auto" />
+             </div>
+             <h1 className="relative z-10 text-5xl md:text-7xl font-serif text-white tracking-tighter mb-3">
                StyleTravel
              </h1>
-             <div className="flex flex-col items-center gap-2">
+             <p className="relative z-10 mx-auto mb-5 max-w-2xl text-sm uppercase tracking-[0.28em] text-neutral-400">
+               Kinetic outfit direction for trips that need a point of view.
+             </p>
+             <div className="relative z-10 flex flex-col items-center gap-2">
                <a href="#editorial-vision" className="text-neutral-300 text-xs uppercase tracking-[0.2em] hover:text-white transition-colors">
                  Editorial Vision
                </a>
-               <div className="flex gap-4 text-neutral-400 text-xs uppercase tracking-[0.2em] border-t border-b border-neutral-800 py-2 w-full max-w-lg justify-center">
+               <div className="flex w-full max-w-lg justify-center gap-4 border-y border-neutral-800 py-2 text-xs uppercase tracking-[0.2em] text-neutral-400">
                  <a href="#weather-travel" className="hover:text-white transition-colors">Weather/Travel</a>
                  <span>•</span>
                  <a href="#bespoke-styling" className="hover:text-white transition-colors">Curated Packing List</a>

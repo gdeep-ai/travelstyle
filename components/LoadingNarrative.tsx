@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import KineticSlamCaption from './KineticSlamCaption';
 
 interface LoadingNarrativeProps {
   where: string;
@@ -14,8 +15,16 @@ const LoadingNarrative: React.FC<LoadingNarrativeProps> = ({ where, narrative })
     sentences.push(remaining);
   }
 
+  const kineticWords = [
+    where || 'Travel',
+    sentences[sentences.length - 1]?.split(/\s+/).find((word) => word.length > 5) || 'Curating',
+    'Palette',
+    'Silhouette',
+  ];
+
   return (
     <div className="w-full max-w-2xl mx-auto mt-12 p-8 border border-neutral-800 bg-neutral-900/50 rounded-xl">
+      <KineticSlamCaption words={kineticWords} intervalMs={760} className="mb-6 h-24" />
       <div className="flex items-center gap-3 mb-6 border-b border-neutral-800 pb-4">
         <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
         <h3 className="text-sm font-medium text-neutral-400 tracking-widest uppercase">

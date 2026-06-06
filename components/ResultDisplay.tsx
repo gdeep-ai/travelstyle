@@ -3,7 +3,7 @@ import { PredictionResult, StyleOption, SingleOutfit } from '../types';
 import { generateOutfitImage } from '../services/geminiService';
 import { ExternalLink, RefreshCw, ChevronDown, ChevronUp, Search, Shirt, Glasses, Briefcase, Watch, Footprints, CheckCircle2, Luggage, Minus, ArrowDown, Layers, ArrowRight, Sparkles, Camera } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, ensureAnonymousAuth } from '../firebase';
 
 interface ResultDisplayProps {
   data: PredictionResult;
@@ -120,6 +120,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, atti
             };
             
             const compressedUrl = await compressImage(result.url);
+            const creatorUid = await ensureAnonymousAuth();
             
             await addDoc(collection(db, 'inspirations'), {
               imageUrl: compressedUrl,
@@ -127,6 +128,7 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ data, selectedStyle, atti
               season: data.weather.season || 'Unknown',
               style: selectedStyle,
               attire: attire,
+              creatorUid,
               createdAt: serverTimestamp()
             });
           } catch (e) {

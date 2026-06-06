@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
+import { getAuth, signInAnonymously } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 
 // Import the Firebase configuration
@@ -9,3 +9,12 @@ import firebaseConfig from './firebase-applet-config.json';
 const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 export const auth = getAuth(app);
+
+export const ensureAnonymousAuth = async (): Promise<string> => {
+  if (auth.currentUser) {
+    return auth.currentUser.uid;
+  }
+
+  const credential = await signInAnonymously(auth);
+  return credential.user.uid;
+};

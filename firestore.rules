@@ -15,6 +15,7 @@ service cloud.firestore {
     //   - style: string (required) - The aesthetic style of the outfit.
     //   - attire: string (required) - The attire preference.
     //   - createdAt: timestamp (required) - When this inspiration was generated.
+    //   - creatorUid: string (required) - Anonymous Firebase Auth UID that created it.
     //
     // ===============================================================
 
@@ -34,9 +35,24 @@ service cloud.firestore {
       return request.resource.data.keys().hasOnly(fields);
     }
 
-    function isValidUrlOrBase64(url) {
+    function isValidHostedImageUrl(url) {
+      return url.matches('^https://[^\\s]+$');
+    }
+
+    function isValidInlineImage(url) {
+      return url.matches('^data:image/(jpeg|jpg|png|webp);base64,[A-Za-z0-9+/=]+$');
+    }
+
+    function isValidImageUrl(url) {
       return url is string &&
-        (url.matches("^https://.*") || url.matches("^http://.*") || url.matches('^data:image/.*'));
+        (isValidHostedImageUrl(url) || isValidInlineImage(url));
+    }
+
+    function isSafeShortString(value, maxLength) {
+      return value is string &&
+        value.size() > 0 &&
+        value.size() <= maxLength &&
+        !value.matches('.*[<>].*');
     }
 
     // ===============================================================
@@ -44,13 +60,15 @@ service cloud.firestore {
     // ===============================================================
 
     function isValidInspiration(data) {
-      return hasOnlyAllowedFields(['imageUrl', 'location', 'season', 'style', 'attire', 'createdAt']) &&
-             data.imageUrl is string && isValidUrlOrBase64(data.imageUrl) && data.imageUrl.size() < 400000 &&
-             data.location is string && data.location.size() > 0 && data.location.size() < 100 &&
-             (!('season' in data) || (data.season is string && data.season.size() < 50)) &&
-             data.style is string && data.style.size() > 0 && data.style.size() < 50 &&
-             data.attire is string && data.attire.size() > 0 && data.attire.size() < 50 &&
-             data.createdAt is timestamp;
+      return hasRequiredFields(['imageUrl', 'location', 'style', 'attire', 'createdAt', 'creatorUid']) &&
+             hasOnlyAllowedFields(['imageUrl', 'location', 'season', 'style', 'attire', 'createdAt', 'creatorUid']) &&
+             isValidImageUrl(data.imageUrl) && data.imageUrl.size() <= 200000 &&
+             isSafeShortString(data.location, 100) &&
+             (!('season' in data) || isSafeShortString(data.season, 50)) &&
+             isSafeShortString(data.style, 50) &&
+             isSafeShortString(data.attire, 50) &&
+             data.createdAt == request.time &&
+             data.creatorUid == request.auth.uid;
     }
 
     // ===============================================================
@@ -58,11 +76,11 @@ service cloud.firestore {
     // ===============================================================
 
     match /inspirations/{inspirationId} {
-      // Anyone can read past inspirations for the carousel
+      // Anyone can read sanitized, immutable past inspirations for the carousel
       allow read: if true;
       
-      // Allow creation by any user, as we rely strictly on payload validation without user authentication in this app
-      allow create: if isValidInspiration(request.resource.data);
+      // Anonymous Auth plus strict payload validation prevents unauthenticated spam and unsafe image payloads
+      allow create: if isAuthenticated() && isValidInspiration(request.resource.data);
       
       // Inspirations are immutable once created
       allow update, delete: if false;

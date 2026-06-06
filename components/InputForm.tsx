@@ -89,6 +89,7 @@ const InputForm: React.FC<InputFormProps> = ({
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showPersonas, setShowPersonas] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const filteredPersonas = PERSONAS.filter(p => p.toLowerCase().includes(who.toLowerCase()));
 
@@ -102,13 +103,32 @@ const InputForm: React.FC<InputFormProps> = ({
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setUserImage(reader.result as string);
-      };
-      reader.readAsDataURL(file);
+    setUploadError(null);
+
+    if (!file) return;
+
+    const allowedImageTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    const maxImageSizeBytes = 4 * 1024 * 1024;
+
+    if (!allowedImageTypes.includes(file.type)) {
+      setUserImage(null);
+      setUploadError('Please upload a JPG, PNG, or WebP image.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
     }
+
+    if (file.size > maxImageSizeBytes) {
+      setUserImage(null);
+      setUploadError('Please choose an image smaller than 4 MB.');
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setUserImage(reader.result as string);
+    };
+    reader.readAsDataURL(file);
   };
 
   return (
@@ -423,9 +443,14 @@ const InputForm: React.FC<InputFormProps> = ({
                     type="file" 
                     ref={fileInputRef} 
                     className="hidden" 
-                    accept="image/*"
+                    accept="image/jpeg,image/png,image/webp"
                     onChange={handleFileChange}
                 />
+                {uploadError && (
+                  <p className="mb-2 text-xs uppercase tracking-widest text-red-400">
+                    {uploadError}
+                  </p>
+                )}
                 
                 <div className="flex-1 min-h-[128px]">
                   {userImage ? (
@@ -434,6 +459,7 @@ const InputForm: React.FC<InputFormProps> = ({
                           <button 
                               onClick={() => {
                                   setUserImage(null);
+                                  setUploadError(null);
                                   if (fileInputRef.current) fileInputRef.current.value = '';
                               }}
                               className="absolute top-2 right-2 bg-black/50 p-1.5 rounded-full text-white hover:bg-red-900/80 transition-colors"
